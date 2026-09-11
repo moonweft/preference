@@ -1,0 +1,30 @@
+{
+	"name": "moonweft/preference",
+	"description": "Preference module",
+	"version": "1.0.0",
+	"type": "module",
+	"autoload": {
+		"psr-4": {
+			"Moonweft\\Preference\\": "src/"
+		}
+	},
+	"require": {
+		"php": "^8.5",
+		"filament/spatie-laravel-settings-plugin": "^5.0"
+	},
+	"require-dev": {
+		"phpstan/phpstan": "^1.13"
+	},
+	"extra": {
+		"laravel": {
+			"providers": [
+				"Moonweft\\Preference\\PreferenceServiceProvider"
+			]
+		}
+	},
+	"config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
