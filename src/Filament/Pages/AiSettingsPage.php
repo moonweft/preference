@@ -18,6 +18,8 @@ use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Locked;
+use MoonWeft\Ai\Services\RequestLimits;
+use Moonweft\Preference\Ai\AiConfiguration;
 use Moonweft\Preference\Ai\AiSettings;
 use Moonweft\Preference\Ai\AiSettingsAccess;
 use Moonweft\Preference\Ai\ProviderCatalog;
@@ -117,6 +119,27 @@ final class AiSettingsPage extends SettingsPage
             ]),
         ];
 
+        $limits = [];
+        foreach ([
+            'requests_per_minute' => ['每分钟请求次数', '次', '按自然分钟重置。'],
+            'requests_per_day' => ['每日请求次数', '次', '所有会话和业务入口共用同一账号额度。'],
+            'max_tokens_per_day' => ['每日用量预算', '预估 token', '按会话存储量、当前输入和输出上限预留；不是服务商实际 token 用量，长会话消耗更多。'],
+            'max_output_tokens' => ['单次回复输出上限', 'token', '限制每次回复的最大长度，仍受服务商及模型支持范围约束。'],
+            'max_conversation_bytes' => ['会话上下文容量', '字节', '包含历史消息和本次输入。默认 262144 字节（256 KiB），超限后需要新建会话。'],
+        ] as $name => [$label, $unit, $help]) {
+            $limits[] = TextInput::make('limits.'.$name)
+                ->label($label)->integer()->minValue(1)->maxValue(2147483647)
+                ->suffix($unit)
+                ->placeholder((string) app(AiConfiguration::class)->baselineLimits()[$name])
+                ->helperText($help.' 留空沿用应用默认值，不支持 0。');
+        }
+
+        $tabs[] = Tab::make('使用限制')->key('limits')->schema([
+            Section::make('账号与会话限额')
+                ->description('对整个系统生效，各账号独立累计。每日额度按系统时区 '.config('app.timezone').' 的零点重置。保存后从下一次请求生效，已有用量不会清零。')
+                ->schema($limits)->columns(2),
+        ]);
+
         foreach ($catalog->options() as $name => $label) {
             $fields = [];
 
@@ -195,6 +218,7 @@ final class AiSettingsPage extends SettingsPage
         return [
             'defaults' => array_filter(Arr::only($data['defaults'] ?? [], array_keys(ProviderCatalog::CAPABILITIES)), filled(...)),
             'providers' => $providers,
+            'limits' => array_map(intval(...), array_filter(Arr::only($data['limits'] ?? [], array_keys(RequestLimits::DEFAULTS)), filled(...))),
         ];
     }
 
@@ -207,7 +231,7 @@ final class AiSettingsPage extends SettingsPage
         }
 
         $decoder = config('settings.decoder') ?? static fn (string $payload, bool $associative): mixed => json_decode($payload, $associative, flags: JSON_THROW_ON_ERROR);
-        $current = ['defaults' => [], 'providers' => []];
+        $current = ['defaults' => [], 'providers' => [], 'limits' => []];
 
         // Compare the locking read itself; a later select may use an older MySQL snapshot.
         foreach ($repository->getBuilder()->where('group', AiSettings::group())->lockForUpdate()->get(['name', 'payload']) as $row) {

@@ -7,6 +7,7 @@ namespace Moonweft\Preference\Ai;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use MoonWeft\Ai\Services\RequestLimits;
 use Spatie\LaravelSettings\Settings;
 
 final class AiSettings extends Settings
@@ -15,6 +16,9 @@ final class AiSettings extends Settings
     public array $defaults = [];
 
     public array $providers = [];
+
+    /** @var array<string, int> */
+    public array $limits = [];
 
     public static function group(): string
     {
@@ -32,7 +36,12 @@ final class AiSettings extends Settings
         $rules = [
             'defaults' => ['array:'.implode(',', array_keys(ProviderCatalog::CAPABILITIES))],
             'providers' => ['array:'.implode(',', array_keys($catalog->options()))],
+            'limits' => ['array:'.implode(',', array_keys(RequestLimits::DEFAULTS))],
         ];
+
+        foreach (array_keys(RequestLimits::DEFAULTS) as $name) {
+            $rules['limits.'.$name] = ['sometimes', 'required', 'integer', 'between:1,2147483647'];
+        }
 
         foreach (ProviderCatalog::CAPABILITIES as $capability => $definition) {
             $rules["defaults.{$capability}"] = ['sometimes', 'required', Rule::in(array_keys($catalog->options($capability)))];
