@@ -126,6 +126,12 @@ final class AiSettingsPage extends SettingsPage
             'max_tokens_per_day' => ['每日用量预算', '预估 token', '按最近历史正文和工具数据、当前输入及输出上限预留，不重复计入密文、表格副本和审计元数据；不是服务商实际 token 用量。'],
             'max_output_tokens' => ['单次回复输出上限', 'token', '限制每次回复的最大长度，仍受服务商及模型支持范围约束。'],
             'max_conversation_bytes' => ['会话上下文容量', '字节', '按最近最多 100 条原生消息和本次输入估算，不含密文膨胀、界面表格副本和审计元数据。默认 1048576 字节（1 MiB）；历史记录继续保存，模型自身窗口仍单独限制。'],
+            'max_steps' => ['单次模型推理轮数', '轮', '默认 6 轮，建议保持在 4–6 轮；审批续跑共用预算。'],
+            'max_tool_calls' => ['单次工具调用总数', '次', '默认 12 次，包括同一轮并行提出的工具调用。'],
+            'max_tool_calls_per_tool' => ['单工具调用上限', '次', '默认 3 次；重复参数会提前拦截，业务工具可设置更低上限。'],
+            'max_tool_result_bytes' => ['单工具结果容量', '字节', '默认 65536 字节，超过后停止继续推理，避免大量数据污染上下文。'],
+            'max_run_seconds' => ['单次执行时间预算', '秒', '默认 120 秒，在模型与工具边界检查；不强行中断已开始的业务事务，审批等待不计时。'],
+            'max_run_tokens' => ['单次实际用量预算', 'token', '默认 64000，累计服务商返回的逐轮用量；达到后不再发起下一步，已发出的请求可能超过余额。'],
         ] as $name => [$label, $unit, $help]) {
             $limits[] = TextInput::make('limits.'.$name)
                 ->label($label)->integer()->minValue(1)->maxValue(2147483647)
@@ -155,6 +161,8 @@ final class AiSettingsPage extends SettingsPage
                 } elseif ($field === 'url') {
                     $input->url()->rules(['url:http,https'])->maxLength(2048)
                         ->helperText('填写完整接口根地址；留空使用应用默认地址。');
+                } elseif (in_array($field, ['models.text.simple', 'models.text.complex'], true)) {
+                    $input->helperText('填写当前服务商实际支持且已评测的模型 ID。留空沿用默认模型，不自动选择 Pro 或 Smartest 别名。');
                 } elseif ($field === 'models.embeddings.dimensions') {
                     $input->integer()->minValue(1)->maxValue(65536);
                 }

@@ -64,7 +64,9 @@ final class AiSettings extends Settings
             $rules["providers.{$name}.models"] = ['sometimes', 'array:'.implode(',', $modelCapabilities)];
 
             foreach ($modelCapabilities as $capability) {
-                $rules["providers.{$name}.models.{$capability}"] = ['sometimes', 'array:'.($capability === 'embeddings' ? 'default,dimensions' : 'default')];
+                $rules["providers.{$name}.models.{$capability}"] = ['sometimes', 'array:'.match ($capability) {
+                    'embeddings' => 'default,dimensions', 'text' => 'default,simple,complex', default => 'default'
+                }];
             }
         }
 
