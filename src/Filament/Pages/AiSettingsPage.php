@@ -123,9 +123,9 @@ final class AiSettingsPage extends SettingsPage
         foreach ([
             'requests_per_minute' => ['每分钟请求次数', '次', '按自然分钟重置。'],
             'requests_per_day' => ['每日请求次数', '次', '所有会话和业务入口共用同一账号额度。'],
-            'max_tokens_per_day' => ['每日用量预算', '预估 token', '按会话存储量、当前输入和输出上限预留；不是服务商实际 token 用量，长会话消耗更多。'],
+            'max_tokens_per_day' => ['每日用量预算', '预估 token', '按最近历史正文和工具数据、当前输入及输出上限预留，不重复计入密文、表格副本和审计元数据；不是服务商实际 token 用量。'],
             'max_output_tokens' => ['单次回复输出上限', 'token', '限制每次回复的最大长度，仍受服务商及模型支持范围约束。'],
-            'max_conversation_bytes' => ['会话上下文容量', '字节', '包含历史消息和本次输入。默认 262144 字节（256 KiB），超限后需要新建会话。'],
+            'max_conversation_bytes' => ['会话上下文容量', '字节', '按最近最多 100 条原生消息和本次输入估算，不含密文膨胀、界面表格副本和审计元数据。默认 1048576 字节（1 MiB）；历史记录继续保存，模型自身窗口仍单独限制。'],
         ] as $name => [$label, $unit, $help]) {
             $limits[] = TextInput::make('limits.'.$name)
                 ->label($label)->integer()->minValue(1)->maxValue(2147483647)
