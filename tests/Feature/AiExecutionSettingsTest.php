@@ -26,7 +26,9 @@ final class AiExecutionSettingsTest extends TestCase
         Filament::setCurrentPanel(Filament::getPanel('admin'));
         $admin = Admin::factory()->create();
         $admin->assignRole(RoleNames::SuperAdmin);
-        $limits = ['max_steps' => 5, 'max_tool_calls' => 10, 'max_tool_calls_per_tool' => 2,
+        $limits = ['max_attachment_files' => 2, 'max_attachment_kb' => 5120,
+            'max_attachment_context_kb' => 16384, 'max_pdf_pages' => 6, 'max_attachment_images' => 12,
+            'max_steps' => 5, 'max_tool_calls' => 10, 'max_tool_calls_per_tool' => 2,
             'max_tool_result_bytes' => 32768, 'max_run_seconds' => 90, 'max_run_tokens' => 32000];
         Livewire::actingAs($admin, 'admin')->test(AiSettingsPage::class)
             ->set('data.limits', $limits)
