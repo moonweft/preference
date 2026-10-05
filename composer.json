@@ -10,6 +10,7 @@
 	},
 	"require": {
 		"php": "^8.5",
+		"archilex/filament-filter-sets": "5.x-dev",
 		"filament/spatie-laravel-settings-plugin": "^5.0",
 		"laravel/ai": "^0.11.2",
 		"laravel/mcp": "^1.0",
