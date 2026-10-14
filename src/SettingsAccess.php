@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Moonweft\Preference\Ai;
+namespace Moonweft\Preference;
 
 use DomainException;
 use Filament\Facades\Filament;
@@ -12,13 +12,12 @@ use Illuminate\Support\Facades\Gate;
 use MoonWeft\Iam\PermissionGuards;
 use MoonWeft\Iam\PrincipalReference;
 use MoonWeft\Iam\PrincipalResolver;
-use Moonweft\Preference\PreferencePermissionContributor;
 
-final readonly class AiSettingsAccess
+final readonly class SettingsAccess
 {
     public function __construct(private PrincipalResolver $principals) {}
 
-    public function principal(): ?PrincipalReference
+    public function principal(string $permission): ?PrincipalReference
     {
         $panel = Filament::getCurrentPanel();
 
@@ -33,22 +32,25 @@ final readonly class AiSettingsAccess
         }
 
         try {
-            $reference = $this->principals->reference($actor);
+            $reference = method_exists($this->principals, 'identify')
+                ? $this->principals->identify($actor)
+                : $this->principals->reference($actor);
         } catch (DomainException) {
             return null;
         }
 
-        if ($reference->provider !== config('auth.guards.'.PermissionGuards::Administration.'.provider')) {
+        $model = config('auth.providers.'.config('auth.guards.'.PermissionGuards::Administration.'.provider').'.model');
+        if (! is_string($model) || ! $actor instanceof $model) {
             return null;
         }
 
         $actor = $this->principals->resolve($reference->identity());
 
         if (! $actor instanceof FilamentUser || ! $actor->canAccessPanel($panel)
-            || Gate::forUser($actor)->denies(PreferencePermissionContributor::MANAGE_AI)) {
+            || Gate::forUser($actor)->denies($permission)) {
             return null;
         }
 
-        return $this->principals->reference($actor);
+        return $reference;
     }
 }

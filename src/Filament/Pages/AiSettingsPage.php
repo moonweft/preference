@@ -19,8 +19,9 @@ use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Locked;
 use Moonweft\Preference\Ai\AiSettings;
-use Moonweft\Preference\Ai\AiSettingsAccess;
 use Moonweft\Preference\Ai\ProviderCatalog;
+use Moonweft\Preference\PreferencePermissionContributor;
+use Moonweft\Preference\SettingsAccess;
 use Spatie\LaravelSettings\SettingsRepositories\DatabaseSettingsRepository;
 use Spatie\LaravelSettings\Support\Crypto;
 use UnitEnum;
@@ -54,12 +55,12 @@ final class AiSettingsPage extends SettingsPage
 
     public static function canAccess(): bool
     {
-        return app(AiSettingsAccess::class)->principal() !== null;
+        return app(SettingsAccess::class)->principal(PreferencePermissionContributor::MANAGE_AI) !== null;
     }
 
     public function mount(): void
     {
-        $principal = app(AiSettingsAccess::class)->principal();
+        $principal = app(SettingsAccess::class)->principal(PreferencePermissionContributor::MANAGE_AI);
         abort_if($principal === null, 403);
         $this->editingPrincipal = $principal->identity();
 
@@ -73,7 +74,7 @@ final class AiSettingsPage extends SettingsPage
 
     public function canEdit(): bool
     {
-        $principal = app(AiSettingsAccess::class)->principal();
+        $principal = app(SettingsAccess::class)->principal(PreferencePermissionContributor::MANAGE_AI);
 
         return ! $this->configurationUnavailable && $principal !== null && hash_equals($this->editingPrincipal, $principal->identity());
     }

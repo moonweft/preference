@@ -1,8 +1,57 @@
 # 系统配置
 
-`moonweft/preference` 管理 host 级系统配置。第一组配置是 Laravel AI SDK，入口为后台 **系统配置 → AI 配置**（`/admin/system/ai`）。
+`moonweft/preference` 管理 host 级系统配置，包括统一日期时间显示和 Laravel AI SDK 配置。
+
+## 系统设置
+
+入口为后台 **系统配置 → 系统设置**（`/admin/system/settings`），管理整个 Host 共用的
+IANA 时区、日期格式和时间格式。时间格式支持 12 / 24 小时及是否显示秒，日期时间格式由
+所选日期与时间格式组合。默认 `UTC`、`Y-m-d`、`H:i:s`，保持现有存储时区；例如选择
+`Asia/Shanghai` 后，UTC 的 `2026-10-14 01:30:00` 显示为 `2026-10-14 09:30:00`。
+
+这组设置是明确共享的非敏感系统资源，所有用户、组织和后台入口读取同一份
+`preference_system` 配置，不接受客户端提交的组织或租户范围。只有通过当前后台身份、
+面板访问权限及 `preference.system.manage` 检查的管理员可以修改。系统设置和 AI 配置
+的管理权限独立，复用 IAM 账号授权；没有身份、账号停用、撤权或切换账号后都不能保存。
+多人同时编辑时，旧页面拒绝覆盖新配置。成功提交后记录 `preference.system.updated`
+结构化日志，包含操作者、Host 范围及变更前后值。
+
+Filament 表格、详情和日期时间输入的默认显示统一接入此设置。选择器使用可配置格式的
+非原生输入，保存时仍转换回 UTC；纯日期（如生日）及纯时间（如每天营业时间）保留原值。
+显式指定的业务格式和时区继续优先，接口序列化、数据库存储、定时任务、业务日界和
+AI 每日额度的应用时区不由显示设置改写。自定义 Blade、通知和导出中手写的格式不会被
+自动替换，应在所属模块使用统一格式化入口；它不会修改传入的日期对象：
+
+```php
+use Moonweft\Preference\System\SystemSettings;
+
+$display = app(SystemSettings::class)->formatDateTime($record->created_at);
+```
+
+设置按请求／任务使用 `scoped` 实例。全局组件回调在执行时从当前容器解析设置，不持有
+旧 worker 的实例，也不修改 PHP 或 Laravel 的全局时区。保存后下一次请求或任务读取新值，
+已打开的页面刷新后生效。部署新增代码时先执行迁移和权限同步，再重载 HTTP / 队列 worker；
+之后仅修改设置值不需要重启：
+
+```sh
+php artisan migrate --path=modules/preference/database/settings/2026_10_14_000001_create_system_settings.php
+php artisan iam:sync
+php artisan octane:reload
+php artisan queue:restart
+```
+
+迁移只新增三个设置，不修改历史业务时间。验证使用
+`modules/preference/tests/Feature/SystemSettingsTest.php` 和
+`modules/preference/tests/Feature/SystemSettingsOctaneTest.php`（在 Host 根目录运行 PHPUnit），覆盖
+实际表单保存、IAM 拒绝、并发覆盖、夏令时、跨日显示、输入 UTC 往返，以及同一 Octane
+worker 的 A → B → A 请求、缺失写入身份、异常恢复和连续任务。该配置自身没有组织私有
+数据；这些验证不代表其他模块的数据隔离已完成审计。
+
+参考：[Filament 日期时间选择器](https://filamentphp.com/docs/5.x/forms/date-time-picker)。
 
 ## AI 配置
+
+入口为后台 **系统配置 → AI 配置**（`/admin/system/ai`）。
 
 - 为文本、图像、语音合成、语音转文字、向量嵌入和搜索重排序分别选择默认服务商。
 - 按已安装 SDK 的能力显示服务商选项，支持 OpenAI、Anthropic、Gemini、DeepSeek、Ollama、OpenAI 兼容接口等。
