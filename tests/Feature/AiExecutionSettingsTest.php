@@ -8,9 +8,9 @@ use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use MoonWeft\Ai\Services\RequestLimits;
+use MoonWeft\Iam\BootstrapDeveloper;
 use MoonWeft\Iam\Models\Admin;
 use MoonWeft\Iam\PermissionSynchronizer;
-use MoonWeft\Iam\RoleNames;
 use Moonweft\Preference\Ai\AiConfiguration;
 use Moonweft\Preference\Ai\AiSettings;
 use Moonweft\Preference\Filament\Pages\AiSettingsPage;
@@ -25,7 +25,7 @@ final class AiExecutionSettingsTest extends TestCase
         app(PermissionSynchronizer::class)->sync();
         Filament::setCurrentPanel(Filament::getPanel('admin'));
         $admin = Admin::factory()->create();
-        $admin->assignRole(RoleNames::SuperAdmin);
+        app(BootstrapDeveloper::class)->initialize($admin, 'Initial settings test developer');
         $limits = ['max_attachment_files' => 2, 'max_attachment_kb' => 5120,
             'max_attachment_context_kb' => 16384, 'max_pdf_pages' => 6, 'max_attachment_images' => 12,
             'max_steps' => 5, 'max_tool_calls' => 10, 'max_tool_calls_per_tool' => 2,
