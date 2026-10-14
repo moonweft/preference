@@ -8,6 +8,7 @@ use Closure;
 use Fiber;
 use Laravel\Ai\AiManager;
 use LogicException;
+use MoonWeft\Ai\Services\RequestLimits;
 use Spatie\LaravelSettings\SettingsRepositories\DatabaseSettingsRepository;
 
 final class AiConfiguration
@@ -15,12 +16,20 @@ final class AiConfiguration
     /** @var array<string, mixed>|null */
     private ?array $original = null;
 
+    private ?array $originalLimits = null;
+
     private ?object $owner = null;
 
     /** @return array<string, mixed> */
     public function baseline(): array
     {
         return $this->original ??= config('ai', []);
+    }
+
+    /** Application limits before any temporary execution overrides. */
+    public function baselineLimits(): array
+    {
+        return $this->originalLimits ??= (new RequestLimits)->all();
     }
 
     /** Complete lazy SDK streams inside the callback before returning. */
@@ -33,6 +42,7 @@ final class AiConfiguration
 
         $previousOwner = $this->owner;
         $previous = config('ai', []);
+        $previousLimits = config('moonweft-ai.limits', []);
         $this->owner = $owner;
 
         try {
@@ -41,12 +51,14 @@ final class AiConfiguration
             return $callback();
         } finally {
             $this->owner = $previousOwner;
+            config(['moonweft-ai.limits' => $previousLimits]);
             $this->useConfiguration($previous);
         }
     }
 
     public function apply(): void
     {
+        config(['moonweft-ai.limits' => app(RequestLimits::class)->all()]);
         $config = $this->baseline();
         $settings = new AiSettings;
         $repository = $settings->getRepository();

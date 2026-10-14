@@ -108,6 +108,11 @@ final class ProviderCatalog
             }
         }
 
+        if ($this->supports($name, 'text')) {
+            $fields['models.text.simple'] = '简单查询模型（可选）';
+            $fields['models.text.complex'] = '分析与业务操作模型（可选）';
+        }
+
         if ($this->supports($name, 'embeddings')) {
             $fields['models.embeddings.dimensions'] = '向量维度';
         }

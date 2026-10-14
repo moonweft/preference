@@ -7,6 +7,8 @@ namespace Moonweft\Preference\Ai;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use MoonWeft\Ai\Services\RequestLimits;
 use Spatie\LaravelSettings\Settings;
 
 final class AiSettings extends Settings
@@ -15,6 +17,9 @@ final class AiSettings extends Settings
     public array $defaults = [];
 
     public array $providers = [];
+
+    /** @var array<string, int> */
+    public array $limits = [];
 
     public static function group(): string
     {
@@ -32,7 +37,10 @@ final class AiSettings extends Settings
         $rules = [
             'defaults' => ['array:'.implode(',', array_keys(ProviderCatalog::CAPABILITIES))],
             'providers' => ['array:'.implode(',', array_keys($catalog->options()))],
+            'limits' => ['array:'.implode(',', array_keys(RequestLimits::DEFAULTS))],
         ];
+
+        $rules = array_merge($rules, RequestLimits::validationRules('limits.'));
 
         foreach (ProviderCatalog::CAPABILITIES as $capability => $definition) {
             $rules["defaults.{$capability}"] = ['sometimes', 'required', Rule::in(array_keys($catalog->options($capability)))];
@@ -55,7 +63,9 @@ final class AiSettings extends Settings
             $rules["providers.{$name}.models"] = ['sometimes', 'array:'.implode(',', $modelCapabilities)];
 
             foreach ($modelCapabilities as $capability) {
-                $rules["providers.{$name}.models.{$capability}"] = ['sometimes', 'array:'.($capability === 'embeddings' ? 'default,dimensions' : 'default')];
+                $rules["providers.{$name}.models.{$capability}"] = ['sometimes', 'array:'.match ($capability) {
+                    'embeddings' => 'default,dimensions', 'text' => 'default,simple,complex', default => 'default'
+                }];
             }
         }
 
@@ -66,6 +76,15 @@ final class AiSettings extends Settings
             }
 
             $baseline = app(AiConfiguration::class)->baseline();
+            try {
+                RequestLimits::validate(array_replace(app(AiConfiguration::class)->baselineLimits(), $this->limits));
+            } catch (ValidationException $exception) {
+                foreach ($exception->errors() as $name => $messages) {
+                    foreach ($messages as $message) {
+                        $validator->errors()->add('limits.'.$name, $message);
+                    }
+                }
+            }
             foreach (ProviderCatalog::CAPABILITIES as $capability => $definition) {
                 $name = $this->defaults[$capability] ?? $baseline[$definition['config']] ?? null;
                 if (! is_string($name) || $catalog->driver($name) !== 'openai-compatible') {

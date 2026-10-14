@@ -18,6 +18,8 @@ use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Locked;
+use MoonWeft\Ai\Services\RequestLimits;
+use Moonweft\Preference\Ai\AiConfiguration;
 use Moonweft\Preference\Ai\AiSettings;
 use Moonweft\Preference\Ai\ProviderCatalog;
 use Moonweft\Preference\PreferencePermissionContributor;
@@ -118,6 +120,38 @@ final class AiSettingsPage extends SettingsPage
             ]),
         ];
 
+        $limits = [];
+        foreach ([
+            'requests_per_minute' => ['每分钟请求次数', '次', '按自然分钟重置。'],
+            'requests_per_day' => ['每日请求次数', '次', '所有会话和业务入口共用同一账号额度。'],
+            'max_tokens_per_day' => ['每日用量预算', '预估 token', '按压缩后的上下文预估预留，结束后按服务商实际用量结算；未用额度释放，未知用量保留预估，不冒充零费用。'],
+            'max_output_tokens' => ['单次回复输出上限', 'token', '限制每次回复的最大长度，仍受服务商及模型支持范围约束。'],
+            'max_conversation_bytes' => ['会话上下文容量', '字节', '按最近最多 100 条原生消息和本次输入估算，不含密文膨胀、界面表格副本和审计元数据。默认 1048576 字节（1 MiB）；历史记录继续保存，模型自身窗口仍单独限制。'],
+            'max_attachment_files' => ['每次附件数量', '个', '默认 3 个，支持 PDF、JPEG、PNG 和 WebP。'],
+            'max_attachment_kb' => ['单个附件大小', 'KiB', '默认 10240（10 MiB）；还受 PHP 与 Web 服务器上传限制约束。'],
+            'max_attachment_context_kb' => ['会话附件容量', 'KiB', '默认 24576（24 MiB），按加密附件存储量限制内存开销，与文字上下文分开计量。'],
+            'max_pdf_pages' => ['单个 PDF 页数', '页', '默认 10 页；按页转为图片，支持扫描件和图表。超过时拒绝，不静默截取。'],
+            'max_attachment_images' => ['会话图片与 PDF 页数', '张 / 页', '默认 20，累计最近上下文中的图片和 PDF 页面；实际支持量仍取决于模型。'],
+            'max_steps' => ['单次模型推理轮数', '轮', '默认 6 轮，建议保持在 4–6 轮；审批续跑共用预算。'],
+            'max_tool_calls' => ['单次工具调用总数', '次', '默认 12 次，包括同一轮并行提出的工具调用。'],
+            'max_tool_calls_per_tool' => ['单工具调用上限', '次', '默认 3 次；重复参数会提前拦截，业务工具可设置更低上限。'],
+            'max_tool_result_bytes' => ['单工具结果容量', '字节', '默认 65536 字节，超过后停止继续推理，避免大量数据污染上下文。'],
+            'max_run_seconds' => ['单次执行时间预算', '秒', '默认 120 秒，在模型与工具边界检查；不强行中断已开始的业务事务，审批等待不计时。'],
+            'max_run_tokens' => ['单次实际用量预算', 'token', '默认 64000，累计服务商返回的逐轮用量；达到后不再发起下一步，已发出的请求可能超过余额。'],
+        ] as $name => [$label, $unit, $help]) {
+            $limits[] = TextInput::make('limits.'.$name)
+                ->label($label)->integer()->minValue(RequestLimits::RANGES[$name][0])->maxValue(RequestLimits::RANGES[$name][1])
+                ->suffix($unit)
+                ->placeholder((string) app(AiConfiguration::class)->baselineLimits()[$name])
+                ->helperText($help.' 留空沿用应用默认值，不支持 0。');
+        }
+
+        $tabs[] = Tab::make('使用限制')->key('limits')->schema([
+            Section::make('账号与会话限额')
+                ->description('对整个系统生效，各账号独立累计。每日额度按系统时区 '.config('app.timezone').' 的零点重置。保存后从下一次请求生效，已有用量不会清零。')
+                ->schema($limits)->columns(2),
+        ]);
+
         foreach ($catalog->options() as $name => $label) {
             $fields = [];
 
@@ -133,6 +167,8 @@ final class AiSettingsPage extends SettingsPage
                 } elseif ($field === 'url') {
                     $input->url()->rules(['url:http,https'])->maxLength(2048)
                         ->helperText('填写完整接口根地址；留空使用应用默认地址。');
+                } elseif (in_array($field, ['models.text.simple', 'models.text.complex'], true)) {
+                    $input->helperText('填写当前服务商实际支持且已评测的模型 ID。留空沿用默认模型，不自动选择 Pro 或 Smartest 别名。');
                 } elseif ($field === 'models.embeddings.dimensions') {
                     $input->integer()->minValue(1)->maxValue(65536);
                 }
@@ -196,6 +232,7 @@ final class AiSettingsPage extends SettingsPage
         return [
             'defaults' => array_filter(Arr::only($data['defaults'] ?? [], array_keys(ProviderCatalog::CAPABILITIES)), filled(...)),
             'providers' => $providers,
+            'limits' => array_map(intval(...), array_filter(Arr::only($data['limits'] ?? [], array_keys(RequestLimits::DEFAULTS)), filled(...))),
         ];
     }
 
@@ -208,7 +245,7 @@ final class AiSettingsPage extends SettingsPage
         }
 
         $decoder = config('settings.decoder') ?? static fn (string $payload, bool $associative): mixed => json_decode($payload, $associative, flags: JSON_THROW_ON_ERROR);
-        $current = ['defaults' => [], 'providers' => []];
+        $current = ['defaults' => [], 'providers' => [], 'limits' => []];
 
         // Compare the locking read itself; a later select may use an older MySQL snapshot.
         foreach ($repository->getBuilder()->where('group', AiSettings::group())->lockForUpdate()->get(['name', 'payload']) as $row) {
