@@ -18,28 +18,30 @@ final class PreferencePermissionContributor implements PermissionContributor
     {
         yield new PermissionDefinition(
             name: self::MANAGE_SYSTEM,
-            label: '管理系统设置',
+            label: __('moonweft-preference::permissions.system.label'),
             guardName: PermissionGuards::Administration,
             moduleKey: 'preference',
-            moduleLabel: '系统配置',
+            moduleLabel: __('moonweft-preference::permissions.module'),
             moduleSort: 900,
             groupKey: 'system',
-            groupLabel: '系统设置',
+            groupLabel: __('moonweft-preference::permissions.system.group'),
             groupSort: 50,
             permissionSort: 100,
+            description: __('moonweft-preference::permissions.system.description'),
         );
 
         yield new PermissionDefinition(
             name: self::MANAGE_AI,
-            label: '管理 AI 配置',
+            label: __('moonweft-preference::permissions.ai.label'),
             guardName: PermissionGuards::Administration,
             moduleKey: 'preference',
-            moduleLabel: '系统配置',
+            moduleLabel: __('moonweft-preference::permissions.module'),
             moduleSort: 900,
             groupKey: 'ai',
-            groupLabel: '人工智能',
+            groupLabel: __('moonweft-preference::permissions.ai.group'),
             groupSort: 100,
             permissionSort: 100,
+            description: __('moonweft-preference::permissions.ai.description'),
         );
     }
 }
