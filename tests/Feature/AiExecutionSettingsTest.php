@@ -20,13 +20,37 @@ final class AiExecutionSettingsTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_unlimited_settings_restore_configuration_after_a_failed_execution(): void
+    {
+        $settings = new AiSettings;
+        $settings->limits = ['development_unlimited' => 1];
+        $settings->save();
+        $before = config('moonweft-ai.limits');
+        try {
+            app(AiConfiguration::class)->run(function (): void {
+                self::assertSame(1, config('moonweft-ai.limits.development_unlimited'));
+                throw new \RuntimeException('Synthetic execution failure');
+            });
+            self::fail('Expected execution failure.');
+        } catch (\RuntimeException $exception) {
+            self::assertSame('Synthetic execution failure', $exception->getMessage());
+        }
+        self::assertSame($before, config('moonweft-ai.limits'));
+        $settings->limits = ['development_unlimited' => 0];
+        $settings->save();
+        app(AiConfiguration::class)->run(function (): void {
+            self::assertFalse(app(RequestLimits::class)->isUnlimited());
+        });
+        self::assertSame($before, config('moonweft-ai.limits'));
+    }
+
     public function test_execution_budgets_and_model_profiles_round_trip_through_the_authorised_page(): void
     {
         app(PermissionSynchronizer::class)->sync();
         Filament::setCurrentPanel(Filament::getPanel('admin'));
         $admin = Admin::factory()->create();
         app(BootstrapDeveloper::class)->initialize($admin, 'Initial settings test developer');
-        $limits = ['max_attachment_files' => 2, 'max_attachment_kb' => 5120,
+        $limits = ['development_unlimited' => 1, 'max_attachment_files' => 2, 'max_attachment_kb' => 5120,
             'max_attachment_context_kb' => 16384, 'max_pdf_pages' => 6, 'max_attachment_images' => 12,
             'max_steps' => 5, 'max_tool_calls' => 10, 'max_tool_calls_per_tool' => 2,
             'max_tool_result_bytes' => 32768, 'max_run_seconds' => 90, 'max_run_tokens' => 32000];
@@ -37,6 +61,8 @@ final class AiExecutionSettingsTest extends TestCase
             ->call('save')->assertHasNoErrors();
         self::assertSame($limits, (new AiSettings)->limits);
         self::assertSame(5, app(RequestLimits::class)->all()['max_steps']);
+        self::assertTrue(app(RequestLimits::class)->isUnlimited());
+        self::assertSame(PHP_INT_MAX, app(RequestLimits::class)->maxSteps());
         $before = config('ai.providers.deepseek.models.text.complex');
         app(AiConfiguration::class)->run(function (): void {
             self::assertSame('evaluated-small', config('ai.providers.deepseek.models.text.simple'));

@@ -152,3 +152,9 @@ php -d memory_limit=1G vendor/bin/phpunit tests/Feature/AiLimitsSettingsTest.php
 参考：[Laravel AI SDK 官方文档](https://laravel.com/docs/13.x/ai-sdk)。
 
 文本模型档位使用 `providers.<name>.models.text.simple/complex`，空值沿用默认模型。不会自动推断 Pro/Smartest 别名或承诺能力提升；请填写已评测、服务商实际支持的模型 ID。现有服务商设置结构即可保存，无需新增设置迁移；AI 内核的运行 telemetry 需补跑其 `000005` 增量迁移。
+
+开发环境在「AI 配置 → 使用限制」选择「开发阶段不限额」，保存为
+`limits.development_unlimited=1`。它只在 local/testing 生效，解除请求频率、每日用量、
+模型轮数、工具次数/结果容量和执行预算，保留用量账本。下方预算值不被覆盖，关闭开关后
+立即恢复。生产环境、模型/附件容量、网络与队列运行边界及授权/审批不受此开关放宽。
+留空时沿用 `MOONWEFT_AI_DEVELOPMENT_UNLIMITED`，默认关闭。

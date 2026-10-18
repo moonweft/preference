@@ -147,6 +147,12 @@ final class AiSettingsPage extends SettingsPage
         }
 
         $tabs[] = Tab::make('使用限制')->key('limits')->schema([
+            Section::make('开发调试')->schema([
+                Select::make('limits.development_unlimited')->label('开发阶段不限额')
+                    ->options([0 => '关闭', 1 => '开启：请求与执行预算无限'])
+                    ->placeholder('沿用应用默认值')
+                    ->helperText('仅在 local / testing 环境生效。开启后不限制请求次数、每日用量、推理轮数、工具调用次数、工具结果容量和执行时间/token 预算；仍记录用量。权限、审批、防重复执行、模型/附件容量、网络超时和任务租约仍生效。下方预算值保留，关闭后恢复。'),
+            ]),
             Section::make('账号与会话限额')
                 ->description('对整个系统生效，各账号独立累计。每日额度按系统时区 '.config('app.timezone').' 的零点重置。保存后从下一次请求生效，已有用量不会清零。')
                 ->schema($limits)->columns(2),
