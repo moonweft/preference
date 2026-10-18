@@ -7,6 +7,7 @@ namespace Moonweft\Preference\Filament;
 use Filament\Contracts\Plugin;
 use Filament\Panel;
 use Moonweft\Preference\Filament\Pages\AiSettingsPage;
+use Moonweft\Preference\Filament\Pages\SmsSettingsPage;
 use Moonweft\Preference\Filament\Pages\SystemSettingsPage;
 
 final class PreferencePlugin implements Plugin
@@ -23,7 +24,7 @@ final class PreferencePlugin implements Plugin
 
     public function register(Panel $panel): void
     {
-        $panel->pages([SystemSettingsPage::class, AiSettingsPage::class]);
+        $panel->pages([SystemSettingsPage::class, AiSettingsPage::class, SmsSettingsPage::class]);
     }
 
     public function boot(Panel $panel): void {}

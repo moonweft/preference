@@ -175,3 +175,33 @@ DeepSeek V4 Pro 支持 `low`。其他型号请核对其支持档位，并用业�
 字段不需要迁移。首次部署这项代码仍须 reload HTTP 与队列 worker。
 
 参数依据：[DeepSeek 思考模式](https://api-docs.deepseek.com/guides/thinking_mode/)。
+
+## 短信配置
+
+后台 **系统配置 → 短信配置**（`/admin/system/sms`）使用
+[`overtrue/easy-sms`](https://github.com/overtrue/easy-sms) 3.5，支持阿里云、腾讯云、七牛云和云片。
+提供系统开关、默认服务商、1–60 秒请求超时、签名与凭据配置。默认关闭，只使用选定的
+服务商；模板 ID、短信内容及变量由业务模块提供，避免将不同业务的模板混为全局设置。
+
+这是 Host 级共享基础设施配置，所有组织共用；不属于组织业务数据，也不向普通用户公开。
+页面和后端写入均需 IAM 平台权限 `preference.sms.manage`，每次保存重新核验当前管理员，
+撤权、停用、切换身份及过期页面均拒绝保存。凭据整体加密存储，密钥不回填浏览器，留空
+保留，可显式移除；启用时默认服务商必填凭据不完整会阻止保存。审计仅记录操作者、
+Host 范围及非敏感配置，不记录密钥。无法解密时拒绝修改，由运维修复加密密钥或恢复备份。
+
+安装或升级后执行：
+
+```bash
+composer update moonweft/preference overtrue/easy-sms
+php artisan migrate --path=modules/preference/database/settings
+php artisan iam:sync
+php artisan octane:reload
+php artisan queue:restart
+```
+
+可信后端业务在已完成收件人授权、范围校验和频率限制的执行点解析
+`app(\Overtrue\EasySms\EasySms::class)`，使用 Easy SMS 原生 `send()` 接口。
+客户端按次创建并读取当前已保存配置，不在单例、长驻闭包或队列任务载荷中保留实例或凭据。
+禁用或配置无效时解析失败，不回退到其他服务商或日志网关。业务负责短信模板审核、
+重复发送防护、异步任务主体和范围复核、失败处理及送达回执；服务商受理不等于用户收到。
+本模块只配置发送通道，保存不发送短信、不验证真实凭据，也不提供公共发送接口。

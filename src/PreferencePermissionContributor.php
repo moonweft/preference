@@ -14,6 +14,8 @@ final class PreferencePermissionContributor implements PermissionContributor
 
     public const MANAGE_SYSTEM = 'preference.system.manage';
 
+    public const MANAGE_SMS = 'preference.sms.manage';
+
     public function permissions(): iterable
     {
         yield new PermissionDefinition(
@@ -42,6 +44,20 @@ final class PreferencePermissionContributor implements PermissionContributor
             groupSort: 100,
             permissionSort: 100,
             description: __('moonweft-preference::permissions.ai.description'),
+        );
+
+        yield new PermissionDefinition(
+            name: self::MANAGE_SMS,
+            label: __('moonweft-preference::permissions.sms.label'),
+            guardName: PermissionGuards::Administration,
+            moduleKey: 'preference',
+            moduleLabel: __('moonweft-preference::permissions.module'),
+            moduleSort: 900,
+            groupKey: 'sms',
+            groupLabel: __('moonweft-preference::permissions.sms.group'),
+            groupSort: 120,
+            permissionSort: 100,
+            description: __('moonweft-preference::permissions.sms.description'),
         );
     }
 }

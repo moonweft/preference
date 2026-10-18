@@ -1,0 +1,179 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Moonweft\Preference\Tests\Feature;
+
+use Filament\Facades\Filament;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use Livewire\Livewire;
+use MoonWeft\Iam\IamPermission;
+use MoonWeft\Iam\Models\AccountAuthorization;
+use MoonWeft\Iam\Models\Admin;
+use MoonWeft\Iam\Models\User;
+use MoonWeft\Iam\PermissionSynchronizer;
+use Moonweft\Preference\Filament\Pages\SmsSettingsPage;
+use Moonweft\Preference\PreferencePermissionContributor;
+use Moonweft\Preference\Sms\SmsSettings;
+use Overtrue\EasySms\EasySms;
+use PHPUnit\Framework\Attributes\DataProvider;
+use Spatie\Permission\Models\Role;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Tests\TestCase;
+
+final class SmsSettingsTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        app(PermissionSynchronizer::class)->sync();
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+    }
+
+    public function test_sms_is_disabled_until_an_administrator_configures_it(): void
+    {
+        $this->assertFalse((new SmsSettings)->enabled);
+        $this->expectException(\LogicException::class);
+        app(EasySms::class);
+    }
+
+    public function test_credentials_are_encrypted_hidden_and_preserved_when_left_blank(): void
+    {
+        $page = Livewire::actingAs($this->admin(), 'admin')->test(SmsSettingsPage::class)
+            ->assertSuccessful()->fillForm([
+                'enabled' => true, 'default_gateway' => 'aliyun', 'timeout' => 8,
+                'providers.aliyun.access_key_id' => 'saved-id',
+                'providers.aliyun.access_key_secret' => 'saved-secret',
+                'providers.aliyun.sign_name' => 'MoonWeft',
+            ])->call('save')->assertHasNoFormErrors()
+            ->assertSet('data.providers.aliyun.access_key_id', null)
+            ->assertSet('data.providers.aliyun.access_key_secret', null)
+            ->assertDontSee('saved-secret');
+        $payload = DB::table('settings')->where('group', SmsSettings::group())->where('name', 'providers')->value('payload');
+        $this->assertStringNotContainsString('saved-secret', $payload);
+        $this->assertStringNotContainsString('saved-id', $payload);
+        $page->fillForm(['timeout' => 9])->call('save')->assertHasNoFormErrors();
+        $this->assertSame('saved-secret', (new SmsSettings)->providers['aliyun']['access_key_secret']);
+        $this->assertSame(9.0, app(EasySms::class)->getConfig()->get('timeout'));
+    }
+
+    public function test_configuration_requires_its_own_permission_and_revocation_is_rechecked(): void
+    {
+        $admin = $this->admin(PreferencePermissionContributor::MANAGE_SYSTEM);
+        Livewire::actingAs($admin, 'admin')->test(SmsSettingsPage::class)->assertForbidden();
+        $role = Role::where('name', 'sms-settings-'.$admin->id)->firstOrFail();
+        $role->givePermissionTo(PreferencePermissionContributor::MANAGE_SMS);
+        $page = Livewire::actingAs($admin, 'admin')->test(SmsSettingsPage::class);
+        $role->revokePermissionTo(PreferencePermissionContributor::MANAGE_SMS);
+        $page->call('save')->assertForbidden();
+    }
+
+    public function test_switching_administrators_invalidates_the_open_page(): void
+    {
+        $page = Livewire::actingAs($this->admin(), 'admin')->test(SmsSettingsPage::class);
+        Livewire::actingAs($this->admin(), 'admin');
+        $page->call('save')->assertForbidden();
+    }
+
+    public function test_web_identity_cannot_bypass_backend_authorisation(): void
+    {
+        $this->actingAs(User::factory()->create(), 'web');
+        $this->expectException(HttpException::class);
+        (new SmsSettings)->save();
+    }
+
+    public function test_a_stale_page_cannot_overwrite_updated_credentials(): void
+    {
+        $admin = $this->admin();
+        $page = Livewire::actingAs($admin, 'admin')->test(SmsSettingsPage::class);
+        $settings = new SmsSettings;
+        $settings->providers = ['yunpian' => ['api_key' => 'newer-key']];
+        $settings->save();
+        $page->fillForm(['timeout' => 10])->call('save')->assertHasErrors(['data']);
+        $this->assertSame('newer-key', (new SmsSettings)->providers['yunpian']['api_key']);
+    }
+
+    public function test_unreadable_credentials_are_not_overwritten(): void
+    {
+        DB::table('settings')->where('group', SmsSettings::group())->where('name', 'providers')
+            ->update(['payload' => json_encode('invalid-ciphertext')]);
+        Livewire::actingAs($this->admin(), 'admin')->test(SmsSettingsPage::class)
+            ->assertSee('短信配置暂时无法读取')->assertSet('data', [])
+            ->call('save')->assertForbidden();
+        $this->assertSame(json_encode('invalid-ciphertext'), DB::table('settings')->where('group', SmsSettings::group())->where('name', 'providers')->value('payload'));
+    }
+
+    public function test_enabling_requires_complete_credentials_and_removal_requires_disabling(): void
+    {
+        $page = Livewire::actingAs($this->admin(), 'admin')->test(SmsSettingsPage::class)
+            ->fillForm(['enabled' => true, 'default_gateway' => 'yunpian'])
+            ->call('save')->assertHasFormErrors(['providers.yunpian.api_key']);
+        $page->fillForm(['providers.yunpian.api_key' => 'key-to-remove'])
+            ->call('save')->assertHasNoFormErrors();
+        $page->fillForm(['providers.yunpian.remove_credentials' => true])
+            ->call('save')->assertHasFormErrors(['providers.yunpian.api_key']);
+        $page->fillForm(['enabled' => false, 'providers.yunpian.remove_credentials' => true])
+            ->call('save')->assertHasNoFormErrors();
+        $this->assertArrayNotHasKey('api_key', (new SmsSettings)->providers['yunpian'] ?? []);
+        $this->expectException(\LogicException::class);
+        app(EasySms::class);
+    }
+
+    #[DataProvider('invalidConfigurations')]
+    public function test_backend_rejects_invalid_configuration(array $values): void
+    {
+        $this->actingAs($this->admin(), 'admin');
+        $this->expectException(ValidationException::class);
+        (new SmsSettings)->fill($values)->save();
+    }
+
+    public static function invalidConfigurations(): array
+    {
+        return [
+            'unknown gateway' => [['default_gateway' => 'errorlog']],
+            'unsafe timeout' => [['timeout' => 0]],
+            'custom endpoint' => [['providers' => ['aliyun' => ['endpoint' => 'http://127.0.0.1']]]],
+        ];
+    }
+
+    #[DataProvider('gateways')]
+    public function test_installed_gateway_receives_the_saved_configuration(string $gateway, array $credentials): void
+    {
+        $this->actingAs($this->admin(), 'admin');
+        (new SmsSettings)->fill(['enabled' => true, 'default_gateway' => $gateway, 'providers' => [$gateway => $credentials]])->save();
+        $client = app(EasySms::class);
+        foreach ($credentials as $field => $value) {
+            $this->assertSame($value, $client->gateway($gateway)->getConfig()->get($field));
+        }
+        $this->assertSame([$gateway], $client->getConfig()->get('default.gateways'));
+    }
+
+    public static function gateways(): array
+    {
+        return [
+            ['aliyun', ['access_key_id' => 'id', 'access_key_secret' => 'secret', 'sign_name' => 'MoonWeft']],
+            ['qcloud', ['sdk_app_id' => '1400000001', 'secret_id' => 'id', 'secret_key' => 'secret', 'sign_name' => 'MoonWeft']],
+            ['qiniu', ['access_key' => 'id', 'secret_key' => 'secret']],
+            ['yunpian', ['api_key' => 'key']],
+        ];
+    }
+
+    private function admin(string $permission = PreferencePermissionContributor::MANAGE_SMS): Admin
+    {
+        $admin = Admin::factory()->create();
+        $role = Role::create(['name' => 'sms-settings-'.$admin->id, 'guard_name' => 'admin']);
+        $role->givePermissionTo(IamPermission::PanelAccess->value, $permission);
+        if (class_exists(AccountAuthorization::class)) {
+            AccountAuthorization::create(['principal_provider' => 'admins', 'principal_id' => (string) $admin->id,
+                'role_ids' => [$role->id], 'organization_ids' => []]);
+        } else {
+            $admin->assignRole($role);
+        }
+
+        return $admin;
+    }
+}

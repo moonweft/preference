@@ -12,4 +12,9 @@ return [
         'label' => 'Manage AI configuration',
         'description' => 'Configure AI providers, models, credentials and execution limits.',
     ],
+    'sms' => [
+        'group' => 'SMS service',
+        'label' => 'Manage SMS configuration',
+        'description' => 'Configure platform SMS availability, default gateway, signatures and credentials.',
+    ],
 ];

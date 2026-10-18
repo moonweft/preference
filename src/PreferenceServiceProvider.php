@@ -16,7 +16,9 @@ use Moonweft\Preference\Ai\AiConfiguration;
 use Moonweft\Preference\Ai\AiSettings;
 use Moonweft\Preference\Ai\ConfigureAiExecution;
 use Moonweft\Preference\Ai\SystemAiLimits;
+use Moonweft\Preference\Sms\SmsSettings;
 use Moonweft\Preference\System\SystemSettings;
+use Overtrue\EasySms\EasySms;
 
 class PreferenceServiceProvider extends ServiceProvider
 {
@@ -25,6 +27,8 @@ class PreferenceServiceProvider extends ServiceProvider
         $this->app->singleton(AiConfiguration::class);
         $this->app->scoped(AiSettings::class);
         $this->app->scoped(SystemSettings::class);
+        $this->app->scoped(SmsSettings::class);
+        $this->app->bind(EasySms::class, static fn (): EasySms => new EasySms((new SmsSettings)->configuration()));
         $this->app->bind(RequestLimits::class, SystemAiLimits::class);
         $this->app->tag([PreferencePermissionContributor::class], PermissionContributor::class);
         $this->app->tag([ConfigureAiExecution::class], ExecutionMiddleware::class);
