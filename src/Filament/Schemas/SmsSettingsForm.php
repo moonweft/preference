@@ -18,11 +18,15 @@ final class SmsSettingsForm
     public static function configure(Schema $schema): Schema
     {
         $tabs = [Tab::make('默认配置')->schema([
-            Section::make('系统短信服务')->description('整个系统共用，默认关闭。启用前请填写默认服务商的凭据；保存配置不会发送短信，也不代表服务商已验证通过。')
+            Section::make('系统短信服务')->description('整个系统共用，默认关闭。启用前请填写主服务商的凭据；保存配置不会发送短信，也不代表服务商已验证通过。')
                 ->schema([
                     Toggle::make('enabled')->label('启用短信发送'),
-                    Select::make('default_gateway')->label('默认服务商')
+                    Select::make('default_gateway')->label('主服务商')
                         ->options(array_map(static fn (array $gateway): string => $gateway['label'], SmsSettings::GATEWAYS))->required(),
+                    Select::make('backup_gateway')->label('备用服务商')->placeholder('不使用备用服务商')
+                        ->options(array_map(static fn (array $gateway): string => $gateway['label'], SmsSettings::GATEWAYS))
+                        ->different('default_gateway'),
+                    Toggle::make('failover_enabled')->label('自动切换')->helperText('主服务商因已识别的余额或鉴权问题拒绝发送时，尝试备用一次；超时、结果未知或已受理时不切换。'),
                     TextInput::make('timeout')->label('请求超时')->numeric()->minValue(1)->maxValue(60)->suffix('秒')->required(),
                 ])->columns(2),
         ])];
@@ -38,13 +42,13 @@ final class SmsSettingsForm
                 $fields[] = $input;
             }
             $fields[] = Toggle::make("providers.{$gateway}.remove_credentials")->label('移除已保存的凭据')
-                ->helperText('当前默认服务商启用时不能移除必填凭据，请先关闭短信或切换服务商。');
+                ->helperText('启用中的主、备用服务商不能移除必填凭据，请先关闭对应发送通道。');
             $tabs[] = Tab::make($definition['label'])->schema($fields)->columns(2);
         }
 
         return $schema->components([
             Tabs::make('短信配置')->tabs($tabs)->vertical()->columnSpanFull(),
-            Section::make('发送与验证')->description('短信模板与内容由业务模块提供，须先在服务商完成签名和模板审核。业务模块负责收件人权限、发送频率、重复发送防护及送达结果核验。')->columnSpanFull(),
+            Section::make('发送与验证')->description('短信模板与内容由业务模块提供。主、备用服务商须分别完成签名和模板审核，并配置各自的模板 ID 与变量映射。业务模块负责收件人权限、发送频率、重复发送防护及送达结果核验。')->columnSpanFull(),
         ]);
     }
 }

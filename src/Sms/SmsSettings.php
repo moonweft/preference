@@ -44,6 +44,10 @@ final class SmsSettings extends Settings
 
     public string $default_gateway = 'aliyun';
 
+    public ?string $backup_gateway = null;
+
+    public bool $failover_enabled = false;
+
     public float $timeout = 5.0;
 
     /** Gateway names mapped to their credential and signature fields. */
@@ -70,7 +74,8 @@ final class SmsSettings extends Settings
             parent::save();
             $audit = [
                 'principal' => $principal->identity(), 'scope' => 'host', 'enabled' => $this->enabled,
-                'default_gateway' => $this->default_gateway, 'timeout' => $this->timeout,
+                'default_gateway' => $this->default_gateway, 'backup_gateway' => $this->backup_gateway,
+                'failover_enabled' => $this->failover_enabled, 'timeout' => $this->timeout,
                 'configured_gateways' => array_keys($this->providers),
             ];
             DB::afterCommit(static fn () => Log::info('preference.sms.updated', $audit));
@@ -87,10 +92,12 @@ final class SmsSettings extends Settings
         }
         $this->validateConfiguration();
 
+        $gateways = $this->failover_enabled ? [$this->default_gateway, $this->backup_gateway] : [$this->default_gateway];
+
         return [
             'timeout' => $this->timeout,
-            'default' => ['strategy' => OrderStrategy::class, 'gateways' => [$this->default_gateway]],
-            'gateways' => [$this->default_gateway => $this->providers[$this->default_gateway]],
+            'default' => ['strategy' => OrderStrategy::class, 'gateways' => $gateways],
+            'gateways' => array_intersect_key($this->providers, array_flip($gateways)),
         ];
     }
 
@@ -99,16 +106,18 @@ final class SmsSettings extends Settings
         $rules = [
             'enabled' => ['required', 'boolean'],
             'default_gateway' => ['required', Rule::in(array_keys(self::GATEWAYS))],
+            'backup_gateway' => [Rule::requiredIf($this->failover_enabled), 'nullable', Rule::in(array_keys(self::GATEWAYS)), 'different:default_gateway'],
+            'failover_enabled' => ['required', 'boolean'],
             'timeout' => ['required', 'numeric', 'between:1,60'],
             'providers' => ['array:'.implode(',', array_keys(self::GATEWAYS))],
         ];
-        $attributes = [];
+        $attributes = ['backup_gateway' => '备用服务商', 'failover_enabled' => '自动切换'];
 
         foreach (self::GATEWAYS as $gateway => $definition) {
             $rules['providers.'.$gateway] = ['sometimes', 'array:'.implode(',', array_keys($definition['fields']))];
             foreach ($definition['fields'] as $field => $label) {
                 $rules["providers.{$gateway}.{$field}"] = [
-                    $this->enabled && $this->default_gateway === $gateway && ! in_array($field, $definition['optional'] ?? [], true) ? 'required' : 'sometimes',
+                    $this->enabled && ($this->default_gateway === $gateway || ($this->failover_enabled && $this->backup_gateway === $gateway)) && ! in_array($field, $definition['optional'] ?? [], true) ? 'required' : 'sometimes',
                     'string', 'max:4096',
                 ];
                 $attributes["providers.{$gateway}.{$field}"] = $definition['label'].' '.$label;

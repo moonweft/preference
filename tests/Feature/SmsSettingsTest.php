@@ -37,6 +37,8 @@ final class SmsSettingsTest extends TestCase
     public function test_sms_is_disabled_until_an_administrator_configures_it(): void
     {
         $this->assertFalse((new SmsSettings)->enabled);
+        $this->assertFalse((new SmsSettings)->failover_enabled);
+        $this->assertNull((new SmsSettings)->backup_gateway);
         $this->expectException(\LogicException::class);
         app(EasySms::class);
     }
@@ -123,6 +125,39 @@ final class SmsSettingsTest extends TestCase
         app(EasySms::class);
     }
 
+    public function test_backup_requires_a_different_provider_and_complete_credentials(): void
+    {
+        $page = Livewire::actingAs($this->admin(), 'admin')->test(SmsSettingsPage::class)
+            ->fillForm([
+                'enabled' => true, 'default_gateway' => 'yunpian', 'failover_enabled' => true,
+                'providers.yunpian.api_key' => 'primary-secret',
+            ])->call('save')->assertHasFormErrors(['backup_gateway']);
+        $page->fillForm(['backup_gateway' => 'yunpian'])->call('save')->assertHasFormErrors(['backup_gateway']);
+        $page->fillForm(['backup_gateway' => 'aliyun'])->call('save')
+            ->assertHasFormErrors(['providers.aliyun.access_key_id', 'providers.aliyun.access_key_secret', 'providers.aliyun.sign_name']);
+        $page->fillForm([
+            'providers.aliyun.access_key_id' => 'backup-id',
+            'providers.aliyun.access_key_secret' => 'backup-secret',
+            'providers.aliyun.sign_name' => 'MoonWeft',
+        ])->call('save')->assertHasNoFormErrors()->assertDontSee('backup-secret');
+        $this->assertSame(['yunpian', 'aliyun'], app(EasySms::class)->getConfig()->get('default.gateways'));
+        $page->fillForm(['timeout' => 7])->call('save')->assertHasNoFormErrors();
+        $this->assertSame('backup-secret', (new SmsSettings)->providers['aliyun']['access_key_secret']);
+        $page->fillForm(['providers.aliyun.remove_credentials' => true])->call('save')
+            ->assertHasFormErrors(['providers.aliyun.access_key_secret']);
+        $page->fillForm(['failover_enabled' => false, 'providers.aliyun.remove_credentials' => true])
+            ->call('save')->assertHasNoFormErrors();
+        $this->assertSame(['yunpian'], app(EasySms::class)->getConfig()->get('default.gateways'));
+    }
+
+    public function test_a_stale_page_cannot_overwrite_the_backup_configuration(): void
+    {
+        $page = Livewire::actingAs($this->admin(), 'admin')->test(SmsSettingsPage::class);
+        (new SmsSettings)->fill(['backup_gateway' => 'qiniu', 'failover_enabled' => true])->save();
+        $page->fillForm(['backup_gateway' => 'yunpian'])->call('save')->assertHasErrors(['data']);
+        $this->assertSame('qiniu', (new SmsSettings)->backup_gateway);
+    }
+
     #[DataProvider('invalidConfigurations')]
     public function test_backend_rejects_invalid_configuration(array $values): void
     {
@@ -135,6 +170,9 @@ final class SmsSettingsTest extends TestCase
     {
         return [
             'unknown gateway' => [['default_gateway' => 'errorlog']],
+            'unknown backup' => [['backup_gateway' => 'errorlog']],
+            'same backup' => [['backup_gateway' => 'aliyun']],
+            'missing backup' => [['failover_enabled' => true]],
             'unsafe timeout' => [['timeout' => 0]],
             'custom endpoint' => [['providers' => ['aliyun' => ['endpoint' => 'http://127.0.0.1']]]],
         ];

@@ -19,6 +19,7 @@ use MoonWeft\Iam\Models\Admin;
 use MoonWeft\Iam\PermissionSynchronizer;
 use Moonweft\Preference\Filament\Pages\SmsSettingsPage;
 use Moonweft\Preference\PreferencePermissionContributor;
+use Moonweft\Preference\Sms\SmsClient;
 use Moonweft\Preference\Sms\SmsSettings;
 use Overtrue\EasySms\EasySms;
 use PHPUnit\Framework\TestCase;
@@ -68,26 +69,33 @@ final class SmsSettingsOctaneTest extends TestCase
                 $previous = $settings->providers['yunpian']['api_key'] ?? null;
                 $settings->enabled = true;
                 $settings->default_gateway = 'yunpian';
-                $settings->providers = ['yunpian' => ['api_key' => $request->input('key')]];
+                $settings->backup_gateway = 'aliyun';
+                $settings->failover_enabled = $request->boolean('failover');
+                $settings->providers = [
+                    'yunpian' => ['api_key' => $request->input('key')],
+                    'aliyun' => ['access_key_id' => 'backup-id', 'access_key_secret' => $request->input('key').'-backup', 'sign_name' => 'MoonWeft'],
+                ];
                 abort_if($request->boolean('fail'), 500, 'Synthetic SMS configuration failure');
                 $settings->save();
                 $sms = app(EasySms::class);
                 $key = $sms->getConfig()->get('gateways.yunpian.api_key');
+                $gateways = $sms->getConfig()->get('default.gateways');
+                $backup = $sms->getConfig()->get('gateways.aliyun.access_key_secret');
                 $sms->getConfig()['gateways'] = ['yunpian' => ['api_key' => 'mutated-client']];
 
-                return [$before, $previous, $key, app(EasySms::class)->getConfig()->get('gateways.yunpian.api_key')];
+                return [$before, $previous, $key, app(EasySms::class)->getConfig()->get('gateways.yunpian.api_key'), $gateways, $backup, $sms instanceof SmsClient];
             });
 
             $previous = null;
             foreach ([[0, 'key-A', false, 200], [1, 'key-B', false, 200], [0, 'key-A', false, 200],
                 [null, 'missing-identity', false, 403], [1, 'failed-key', true, 500], [0, 'recovered-key', false, 200]] as [$actor, $key, $fail, $status]) {
-                $request = Request::create('/octane-test/sms-settings', 'POST', ['key' => $key, 'fail' => $fail], server: ['HTTP_ACCEPT' => 'application/json']);
+                $request = Request::create('/octane-test/sms-settings', 'POST', ['key' => $key, 'fail' => $fail, 'failover' => $actor === 0], server: ['HTTP_ACCEPT' => 'application/json']);
                 $request->attributes->set('sms_test_actor', $actor === null ? null : $actors[$actor]);
                 $worker->handle($request, new RequestContext);
                 $response = array_pop($responses);
                 self::assertSame($status, $response->getStatusCode(), $response->getContent());
                 if ($status === 200) {
-                    self::assertSame([null, $previous, $key, $key], json_decode($response->getContent(), true));
+                    self::assertSame([null, $previous, $key, $key, $actor === 0 ? ['yunpian', 'aliyun'] : ['yunpian'], $actor === 0 ? $key.'-backup' : null, true], json_decode($response->getContent(), true));
                     $previous = $key;
                 }
             }
@@ -104,10 +112,15 @@ final class SmsSettingsOctaneTest extends TestCase
                 app(EasySms::class)->getConfig()->get('gateways.yunpian.api_key'), SmsSettingsPage::canAccess(),
             ])->result);
             $worker->handleTask(static function (): void {
+                app(SmsSettings::class)->failover_enabled = false;
                 app(SmsSettings::class)->providers = ['yunpian' => ['api_key' => 'unsaved-task-key']];
                 app(EasySms::class)->getConfig()['gateways'] = ['yunpian' => ['api_key' => 'mutated-task-client']];
             });
-            self::assertSame('recovered-key', $worker->handleTask(static fn (): string => app(EasySms::class)->getConfig()->get('gateways.yunpian.api_key'))->result);
+            self::assertSame(['recovered-key', 'recovered-key-backup', ['yunpian', 'aliyun']], $worker->handleTask(static fn (): array => [
+                app(EasySms::class)->getConfig()->get('gateways.yunpian.api_key'),
+                app(EasySms::class)->getConfig()->get('gateways.aliyun.access_key_secret'),
+                app(EasySms::class)->getConfig()->get('default.gateways'),
+            ])->result);
         } finally {
             $worker->terminate();
             unset($_ENV['APP_RUNNING_IN_CONSOLE']);

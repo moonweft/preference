@@ -127,6 +127,8 @@ final class SmsSettingsPage extends SettingsPage
 
         return [
             'enabled' => (bool) $data['enabled'], 'default_gateway' => $data['default_gateway'],
+            'backup_gateway' => filled($data['backup_gateway'] ?? null) ? $data['backup_gateway'] : null,
+            'failover_enabled' => (bool) $data['failover_enabled'],
             'timeout' => (float) $data['timeout'], 'providers' => $providers,
         ];
     }
