@@ -26,7 +26,9 @@ final class SmsSettingsPage extends SettingsPage
 
     protected static ?string $title = '短信配置';
 
-    protected static string|UnitEnum|null $navigationGroup = '系统配置';
+    protected static ?string $navigationLabel = '短信';
+
+    protected static string|UnitEnum|null $navigationGroup = '偏好配置';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChatBubbleLeftRight;
 

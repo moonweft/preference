@@ -34,9 +34,9 @@ final class AiSettingsPage extends SettingsPage
 
     protected static ?string $title = 'AI 配置';
 
-    protected static ?string $navigationLabel = 'AI 配置';
+    protected static ?string $navigationLabel = 'AI';
 
-    protected static string|UnitEnum|null $navigationGroup = '系统配置';
+    protected static string|UnitEnum|null $navigationGroup = '偏好配置';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSparkles;
 

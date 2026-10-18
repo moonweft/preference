@@ -23,7 +23,9 @@ final class SystemSettingsPage extends SettingsPage
 
     protected static ?string $title = '系统设置';
 
-    protected static string|UnitEnum|null $navigationGroup = '系统配置';
+    protected static ?string $navigationLabel = '系统';
+
+    protected static string|UnitEnum|null $navigationGroup = '偏好配置';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCog6Tooth;
 
