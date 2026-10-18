@@ -113,6 +113,10 @@ final class ProviderCatalog
             $fields['models.text.complex'] = '分析与业务操作模型（可选）';
         }
 
+        if ($this->driver($name) === 'deepseek') {
+            $fields['reasoning_effort'] = '推理强度';
+        }
+
         if ($this->supports($name, 'embeddings')) {
             $fields['models.embeddings.dimensions'] = '向量维度';
         }

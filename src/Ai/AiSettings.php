@@ -53,6 +53,7 @@ final class AiSettings extends Settings
 
             foreach ($fields as $field => $label) {
                 $rules["providers.{$name}.{$field}"] = match ($field) {
+                    'reasoning_effort' => ['sometimes', 'required', Rule::in(['none', 'low', 'high', 'max'])],
                     'url' => ['sometimes', 'required', 'string', 'url:http,https', 'max:2048'],
                     'models.embeddings.dimensions' => ['sometimes', 'required', 'integer', 'between:1,65536'],
                     default => ['sometimes', 'required', 'string', 'max:4096'],

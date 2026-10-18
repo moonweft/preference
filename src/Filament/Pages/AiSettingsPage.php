@@ -162,6 +162,15 @@ final class AiSettingsPage extends SettingsPage
             $fields = [];
 
             foreach ($catalog->fields($name) as $field => $fieldLabel) {
+                if ($field === 'reasoning_effort') {
+                    $fields[] = Select::make("providers.{$name}.{$field}")->label($fieldLabel)
+                        ->options(['none' => '关闭深度推理', 'low' => '低：较低延迟', 'high' => '高：复杂推理', 'max' => '最高：更长等待'])
+                        ->placeholder('沿用应用或服务商默认值')
+                        ->helperText('低档优先缩短等待，高档适合复杂分析。DeepSeek V4 Pro 支持 low；其他型号请确认支持的档位。调整后请用实际业务问题验证回答质量。');
+
+                    continue;
+                }
+
                 $input = TextInput::make("providers.{$name}.{$field}")
                     ->label($fieldLabel)
                     ->maxLength(4096)

@@ -6,6 +6,7 @@ namespace Moonweft\Preference\Tests\Feature;
 
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use MoonWeft\Ai\Services\RequestLimits;
 use MoonWeft\Iam\BootstrapDeveloper;
@@ -19,6 +20,14 @@ use Tests\TestCase;
 final class AiExecutionSettingsTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_reasoning_effort_rejects_unrecognised_values(): void
+    {
+        $settings = new AiSettings;
+        $settings->providers = ['deepseek' => ['reasoning_effort' => 'unbounded']];
+        $this->expectException(ValidationException::class);
+        $settings->save();
+    }
 
     public function test_unlimited_settings_restore_configuration_after_a_failed_execution(): void
     {
@@ -58,6 +67,7 @@ final class AiExecutionSettingsTest extends TestCase
             ->set('data.limits', $limits)
             ->set('data.providers.deepseek.models.text.simple', 'evaluated-small')
             ->set('data.providers.deepseek.models.text.complex', 'evaluated-large')
+            ->set('data.providers.deepseek.reasoning_effort', 'low')
             ->call('save')->assertHasNoErrors();
         self::assertSame($limits, (new AiSettings)->limits);
         self::assertSame(5, app(RequestLimits::class)->all()['max_steps']);
@@ -67,6 +77,7 @@ final class AiExecutionSettingsTest extends TestCase
         app(AiConfiguration::class)->run(function (): void {
             self::assertSame('evaluated-small', config('ai.providers.deepseek.models.text.simple'));
             self::assertSame('evaluated-large', config('ai.providers.deepseek.models.text.complex'));
+            self::assertSame('low', config('ai.providers.deepseek.reasoning_effort'));
         });
         self::assertSame($before, config('ai.providers.deepseek.models.text.complex'));
     }

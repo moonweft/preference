@@ -23,6 +23,8 @@ use MoonWeft\Iam\IamPermission;
 use MoonWeft\Iam\Models\AccountAuthorization;
 use MoonWeft\Iam\Models\Admin;
 use MoonWeft\Iam\PermissionSynchronizer;
+use Moonweft\Preference\Ai\AiConfiguration;
+use Moonweft\Preference\Ai\AiSettings;
 use Moonweft\Preference\Filament\Pages\SystemSettingsPage;
 use Moonweft\Preference\PreferencePermissionContributor;
 use Moonweft\Preference\System\SystemSettings;
@@ -130,6 +132,47 @@ final class SystemSettingsOctaneTest extends TestCase
         }));
         self::assertSame('Asia/Shanghai', $this->worker->handleTask(static fn (): string => app(SystemSettings::class)->timezone)->result);
         self::assertSame('UTC', $this->worker->application()->make('config')->get('app.timezone'));
+    }
+
+    public function test_ai_reasoning_settings_refresh_and_restore_in_one_worker_after_failure(): void
+    {
+        self::assertSame(0, Artisan::call('migrate', ['--force' => true]));
+        $actors = Admin::factory()->count(2)->create();
+        $baseline = config('ai.providers.deepseek.reasoning_effort');
+        $this->worker->application()->make('router')->get('/octane-test/ai-effort', static function (Request $request): array {
+            abort_unless($request->attributes->get('octane_test_actor') instanceof Admin, 403);
+            $effort = $request->attributes->get('octane_test_effort');
+            $settings = new AiSettings;
+            $settings->providers = $effort === null ? [] : ['deepseek' => ['reasoning_effort' => $effort]];
+            $settings->save();
+            $before = config('ai.providers.deepseek.reasoning_effort');
+            try {
+                $effort = app(AiConfiguration::class)->run(static function () use ($request): mixed {
+                    abort_if($request->boolean('fail'), 500, 'Synthetic AI configuration failure');
+
+                    return config('ai.providers.deepseek.reasoning_effort');
+                });
+            } finally {
+                if (config('ai.providers.deepseek.reasoning_effort') !== $before) {
+                    throw new \LogicException('AI configuration leaked.');
+                }
+            }
+
+            return ['effort' => $effort, 'restored' => $before];
+        });
+        foreach ([[0, 'low', false, 200], [1, 'high', false, 200], [0, 'low', false, 200],
+            [null, 'low', false, 403], [1, 'none', true, 500], [0, null, false, 200]] as [$actor, $effort, $fail, $status]) {
+            $request = Request::create('/octane-test/ai-effort'.($fail ? '?fail=1' : ''), server: ['HTTP_ACCEPT' => 'application/json']);
+            $request->attributes->set('octane_test_actor', $actor === null ? null : $actors[$actor]);
+            $request->attributes->set('octane_test_effort', $effort);
+            $this->worker->handle($request, new RequestContext);
+            $response = array_pop($this->responses);
+            self::assertSame($status, $response->getStatusCode(), $response->getContent());
+            if ($status === 200) {
+                self::assertSame(['effort' => $effort ?? $baseline, 'restored' => $baseline], json_decode($response->getContent(), true));
+            }
+            self::assertSame($baseline, $this->worker->application()->make('config')->get('ai.providers.deepseek.reasoning_effort'));
+        }
     }
 
     private function request(?Admin $actor = null, array $data = [], int $status = 200): array

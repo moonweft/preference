@@ -158,3 +158,20 @@ php -d memory_limit=1G vendor/bin/phpunit tests/Feature/AiLimitsSettingsTest.php
 模型轮数、工具次数/结果容量和执行预算，保留用量账本。下方预算值不被覆盖，关闭开关后
 立即恢复。生产环境、模型/附件容量、网络与队列运行边界及授权/审批不受此开关放宽。
 留空时沿用 `MOONWEFT_AI_DEVELOPMENT_UNLIMITED`，默认关闭。
+
+
+### DeepSeek 推理强度
+
+在「AI 配置 → DeepSeek → 推理强度」选择 `low/high/max/none`，保存为
+`providers.<name>.reasoning_effort`。仅接受枚举，不允许透传任意服务商请求字段。
+留空继承应用或服务商默认值；`none` 关闭深度推理。当前员工助手通过 Laravel AI
+`HasProviderOptions` 在同步与流式请求中读取该设置，其他业务 Agent 需显式接入原生契约。
+该设置只用于匹配当前默认服务商 driver 的请求；审批继续使用原服务商且默认服务商已
+切换时，不把新服务商的参数混入旧请求。
+
+DeepSeek V4 Pro 支持 `low`。其他型号请核对其支持档位，并用业务问题验证正确性后
+调整。本轮开发环境选择 Pro + low，未降低 IAM、数据隔离、业务校验或审批要求。
+每次调用读取当前系统配置，正常、异常和后续 Octane 请求均恢复执行前配置；仅保存
+字段不需要迁移。首次部署这项代码仍须 reload HTTP 与队列 worker。
+
+参数依据：[DeepSeek 思考模式](https://api-docs.deepseek.com/guides/thinking_mode/)。
