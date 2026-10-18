@@ -18,17 +18,10 @@ use Moonweft\Preference\SettingsAccess;
 use Moonweft\Preference\Sms\SmsSettings;
 use Spatie\LaravelSettings\SettingsRepositories\DatabaseSettingsRepository;
 use Spatie\LaravelSettings\Support\Crypto;
-use UnitEnum;
 
 final class SmsSettingsPage extends SettingsPage
 {
     protected static string $settings = SmsSettings::class;
-
-    protected static ?string $title = '短信配置';
-
-    protected static ?string $navigationLabel = '短信';
-
-    protected static string|UnitEnum|null $navigationGroup = '偏好配置';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChatBubbleLeftRight;
 
@@ -46,6 +39,21 @@ final class SmsSettingsPage extends SettingsPage
 
     #[Locked]
     public bool $configurationUnavailable = false;
+
+    public function getTitle(): string
+    {
+        return __('moonweft-preference::sms.title');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('moonweft-preference::sms.navigation_label');
+    }
+
+    public static function getNavigationGroup(): string
+    {
+        return __('moonweft-preference::sms.navigation_group');
+    }
 
     public static function canAccess(): bool
     {
@@ -87,7 +95,7 @@ final class SmsSettingsPage extends SettingsPage
     {
         if ($this->configurationUnavailable) {
             return $schema->components([
-                Section::make('短信配置暂时无法读取')->description('已保存的凭据无法解密，请联系运维检查应用加密密钥或恢复配置备份，修复后刷新页面。'),
+                Section::make(__('moonweft-preference::sms.errors.unavailable'))->description(__('moonweft-preference::sms.errors.unavailable_help')),
             ]);
         }
 
@@ -137,7 +145,7 @@ final class SmsSettingsPage extends SettingsPage
     {
         $repository = app(SmsSettings::class)->getRepository();
         if (! $repository instanceof DatabaseSettingsRepository) {
-            throw new \LogicException('SMS settings require a database settings repository.');
+            throw new \LogicException(__('moonweft-preference::sms.errors.database_required'));
         }
         $decoder = config('settings.decoder') ?? static fn (string $payload): mixed => json_decode($payload, true, flags: JSON_THROW_ON_ERROR);
         $current = [];
@@ -146,7 +154,7 @@ final class SmsSettingsPage extends SettingsPage
             $current[$row->getAttribute('name')] = $row->getAttribute('name') === 'providers' ? Crypto::decrypt($value) : $value;
         }
         if (! hash_equals($this->settingsVersion, $this->fingerprint($current))) {
-            throw ValidationException::withMessages(['data' => '短信配置已被其他管理员修改，请刷新页面后重试。']);
+            throw ValidationException::withMessages(['data' => __('moonweft-preference::sms.errors.stale')]);
         }
     }
 

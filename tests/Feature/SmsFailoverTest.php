@@ -10,8 +10,12 @@ use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
+use Illuminate\Container\Container;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Log\Logger;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Translation\FileLoader;
+use Illuminate\Translation\Translator;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger as Monolog;
 use Moonweft\Preference\Sms\SmsClient;
@@ -31,6 +35,9 @@ final class SmsFailoverTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $loader = new FileLoader(new Filesystem, dirname(__DIR__, 2).'/resources/lang');
+        $loader->addNamespace('moonweft-preference', dirname(__DIR__, 2).'/resources/lang');
+        Container::getInstance()->instance('translator', new Translator($loader, 'en'));
         $this->logs = new TestHandler;
         Log::swap(new Logger(new Monolog('sms-test', [$this->logs])));
     }
@@ -85,6 +92,9 @@ final class SmsFailoverTest extends TestCase
         } catch (NoGatewayAvailableException $exception) {
             self::assertSame([$primary], array_keys($exception->getResults()));
             self::assertFalse($this->logs->getRecords()[0]->context['fallback']);
+            if ($status === 200 && $body === []) {
+                self::assertSame('The provider response did not confirm acceptance. Check the sending records before taking further action.', $exception->getException($primary)->getMessage());
+            }
         }
     }
 

@@ -58,8 +58,11 @@ final class SmsSettingsOctaneTest extends TestCase
                 }
             }
             self::assertFalse($worker->application()->make(SmsSettings::class)->enabled);
+            $defaultLocale = $worker->application()->getLocale();
             $worker->application()->make('router')->post('/octane-test/sms-settings', static function (Request $request): array {
                 $before = auth('admin')->id();
+                $localeBefore = app()->getLocale();
+                app()->setLocale($request->input('locale'));
                 Filament::setCurrentPanel(Filament::getPanel('admin'));
                 if ($actor = $request->attributes->get('sms_test_actor')) {
                     auth('admin')->setUser($actor);
@@ -83,19 +86,19 @@ final class SmsSettingsOctaneTest extends TestCase
                 $backup = $sms->getConfig()->get('gateways.aliyun.access_key_secret');
                 $sms->getConfig()['gateways'] = ['yunpian' => ['api_key' => 'mutated-client']];
 
-                return [$before, $previous, $key, app(EasySms::class)->getConfig()->get('gateways.yunpian.api_key'), $gateways, $backup, $sms instanceof SmsClient];
+                return [$before, $previous, $key, app(EasySms::class)->getConfig()->get('gateways.yunpian.api_key'), $gateways, $backup, $sms instanceof SmsClient, $localeBefore, SmsSettingsPage::getNavigationLabel(), __(SmsSettings::GATEWAYS['aliyun']['label'])];
             });
 
             $previous = null;
             foreach ([[0, 'key-A', false, 200], [1, 'key-B', false, 200], [0, 'key-A', false, 200],
                 [null, 'missing-identity', false, 403], [1, 'failed-key', true, 500], [0, 'recovered-key', false, 200]] as [$actor, $key, $fail, $status]) {
-                $request = Request::create('/octane-test/sms-settings', 'POST', ['key' => $key, 'fail' => $fail, 'failover' => $actor === 0], server: ['HTTP_ACCEPT' => 'application/json']);
+                $request = Request::create('/octane-test/sms-settings', 'POST', ['key' => $key, 'fail' => $fail, 'failover' => $actor === 0, 'locale' => $actor === 0 ? 'zh_CN' : 'en'], server: ['HTTP_ACCEPT' => 'application/json']);
                 $request->attributes->set('sms_test_actor', $actor === null ? null : $actors[$actor]);
                 $worker->handle($request, new RequestContext);
                 $response = array_pop($responses);
                 self::assertSame($status, $response->getStatusCode(), $response->getContent());
                 if ($status === 200) {
-                    self::assertSame([null, $previous, $key, $key, $actor === 0 ? ['yunpian', 'aliyun'] : ['yunpian'], $actor === 0 ? $key.'-backup' : null, true], json_decode($response->getContent(), true));
+                    self::assertSame([null, $previous, $key, $key, $actor === 0 ? ['yunpian', 'aliyun'] : ['yunpian'], $actor === 0 ? $key.'-backup' : null, true, $defaultLocale, $actor === 0 ? '短信' : 'SMS', $actor === 0 ? '阿里云' : 'Alibaba Cloud'], json_decode($response->getContent(), true));
                     $previous = $key;
                 }
             }
@@ -103,13 +106,13 @@ final class SmsSettingsOctaneTest extends TestCase
             $worker->handleTask(static function () use ($actors): void {
                 Role::where('name', 'sms-worker-'.$actors[1]->id)->firstOrFail()->revokePermissionTo(PreferencePermissionContributor::MANAGE_SMS);
             });
-            $request = Request::create('/octane-test/sms-settings', 'POST', ['key' => 'revoked'], server: ['HTTP_ACCEPT' => 'application/json']);
+            $request = Request::create('/octane-test/sms-settings', 'POST', ['key' => 'revoked', 'locale' => 'en'], server: ['HTTP_ACCEPT' => 'application/json']);
             $request->attributes->set('sms_test_actor', $actors[1]);
             $worker->handle($request, new RequestContext);
             self::assertSame(403, array_pop($responses)->getStatusCode());
 
-            self::assertSame(['recovered-key', false], $worker->handleTask(static fn (): array => [
-                app(EasySms::class)->getConfig()->get('gateways.yunpian.api_key'), SmsSettingsPage::canAccess(),
+            self::assertSame(['recovered-key', false, $defaultLocale], $worker->handleTask(static fn (): array => [
+                app(EasySms::class)->getConfig()->get('gateways.yunpian.api_key'), SmsSettingsPage::canAccess(), app()->getLocale(),
             ])->result);
             $worker->handleTask(static function (): void {
                 app(SmsSettings::class)->failover_enabled = false;

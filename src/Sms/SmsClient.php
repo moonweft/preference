@@ -30,7 +30,7 @@ final class SmsClient extends EasySms
         $message = $this->formatMessage($message);
         $gateways = $this->formatGateways($gateways ?: ($message->getGateways() ?: $this->config->get('default.gateways', [])));
         if (count($gateways) > 2 || array_diff(array_keys($gateways), array_keys(SmsSettings::GATEWAYS))) {
-            throw new InvalidArgumentException('短信只支持一个主服务商和一个已配置的备用服务商。');
+            throw new InvalidArgumentException(__('moonweft-preference::sms.errors.invalid_gateways'));
         }
 
         $sendId = (string) Str::uuid();
@@ -40,7 +40,7 @@ final class SmsClient extends EasySms
             try {
                 $results += parent::send($to, $message, [$gateway => $config]);
                 if (! $this->accepted($gateway, $results[$gateway]['result'])) {
-                    throw new UnexpectedValueException('服务商响应未能确认受理，请核对发送记录后再处理。');
+                    throw new UnexpectedValueException(__('moonweft-preference::sms.errors.unconfirmed'));
                 }
             } catch (Throwable $exception) {
                 if ($exception instanceof NoGatewayAvailableException) {

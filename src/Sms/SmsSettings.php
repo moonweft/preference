@@ -18,23 +18,23 @@ final class SmsSettings extends Settings
 {
     public const GATEWAYS = [
         'aliyun' => [
-            'label' => '阿里云',
-            'fields' => ['access_key_id' => 'Access Key ID', 'access_key_secret' => 'Access Key Secret', 'sign_name' => '短信签名'],
+            'label' => 'moonweft-preference::sms.providers.aliyun',
+            'fields' => ['access_key_id' => 'moonweft-preference::sms.fields.access_key_id', 'access_key_secret' => 'moonweft-preference::sms.fields.access_key_secret', 'sign_name' => 'moonweft-preference::sms.fields.sign_name'],
             'secrets' => ['access_key_id', 'access_key_secret'],
         ],
         'qcloud' => [
-            'label' => '腾讯云',
-            'fields' => ['sdk_app_id' => 'SDK App ID', 'secret_id' => 'Secret ID', 'secret_key' => 'Secret Key', 'sign_name' => '短信签名'],
+            'label' => 'moonweft-preference::sms.providers.qcloud',
+            'fields' => ['sdk_app_id' => 'moonweft-preference::sms.fields.sdk_app_id', 'secret_id' => 'moonweft-preference::sms.fields.secret_id', 'secret_key' => 'moonweft-preference::sms.fields.secret_key', 'sign_name' => 'moonweft-preference::sms.fields.sign_name'],
             'secrets' => ['secret_id', 'secret_key'],
         ],
         'qiniu' => [
-            'label' => '七牛云',
-            'fields' => ['access_key' => 'Access Key', 'secret_key' => 'Secret Key'],
+            'label' => 'moonweft-preference::sms.providers.qiniu',
+            'fields' => ['access_key' => 'moonweft-preference::sms.fields.access_key', 'secret_key' => 'moonweft-preference::sms.fields.secret_key'],
             'secrets' => ['access_key', 'secret_key'],
         ],
         'yunpian' => [
-            'label' => '云片',
-            'fields' => ['api_key' => 'API Key', 'signature' => '短信签名（选填，包含【】）'],
+            'label' => 'moonweft-preference::sms.providers.yunpian',
+            'fields' => ['api_key' => 'moonweft-preference::sms.fields.api_key', 'signature' => 'moonweft-preference::sms.fields.signature'],
             'secrets' => ['api_key'],
             'optional' => ['signature'],
         ],
@@ -88,7 +88,7 @@ final class SmsSettings extends Settings
     public function configuration(): array
     {
         if (! $this->enabled) {
-            throw new \LogicException('短信发送尚未启用，请先配置短信服务。');
+            throw new \LogicException(__('moonweft-preference::sms.errors.disabled'));
         }
         $this->validateConfiguration();
 
@@ -111,16 +111,20 @@ final class SmsSettings extends Settings
             'timeout' => ['required', 'numeric', 'between:1,60'],
             'providers' => ['array:'.implode(',', array_keys(self::GATEWAYS))],
         ];
-        $attributes = ['backup_gateway' => '备用服务商', 'failover_enabled' => '自动切换'];
+        $attributes = [];
+        foreach (array_keys($rules) as $field) {
+            $attributes[$field] = __('moonweft-preference::sms.fields.'.$field);
+        }
 
         foreach (self::GATEWAYS as $gateway => $definition) {
+            $attributes['providers.'.$gateway] = __($definition['label']);
             $rules['providers.'.$gateway] = ['sometimes', 'array:'.implode(',', array_keys($definition['fields']))];
             foreach ($definition['fields'] as $field => $label) {
                 $rules["providers.{$gateway}.{$field}"] = [
                     $this->enabled && ($this->default_gateway === $gateway || ($this->failover_enabled && $this->backup_gateway === $gateway)) && ! in_array($field, $definition['optional'] ?? [], true) ? 'required' : 'sometimes',
                     'string', 'max:4096',
                 ];
-                $attributes["providers.{$gateway}.{$field}"] = $definition['label'].' '.$label;
+                $attributes["providers.{$gateway}.{$field}"] = __($definition['label']).' '.__($label);
             }
         }
 

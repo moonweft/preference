@@ -6,6 +6,7 @@ namespace Moonweft\Preference\Tests\Feature;
 
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
@@ -16,8 +17,10 @@ use MoonWeft\Iam\Models\User;
 use MoonWeft\Iam\PermissionSynchronizer;
 use Moonweft\Preference\Filament\Pages\SmsSettingsPage;
 use Moonweft\Preference\PreferencePermissionContributor;
+use Moonweft\Preference\Sms\SmsClient;
 use Moonweft\Preference\Sms\SmsSettings;
 use Overtrue\EasySms\EasySms;
+use Overtrue\EasySms\Exceptions\InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Role;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -198,6 +201,63 @@ final class SmsSettingsTest extends TestCase
             ['qiniu', ['access_key' => 'id', 'secret_key' => 'secret']],
             ['yunpian', ['api_key' => 'key']],
         ];
+    }
+
+    public function test_sms_copy_and_validation_follow_locale_changes(): void
+    {
+        $admin = $this->admin();
+        foreach (['zh_CN', 'en', 'zh_CN'] as $locale) {
+            app()->setLocale($locale);
+            $english = $locale === 'en';
+            $page = Livewire::actingAs($admin, 'admin')->test(SmsSettingsPage::class)
+                ->assertSee($english ? 'Primary provider' : '主服务商')
+                ->assertSee($english ? 'Backup provider' : '备用服务商')
+                ->assertSee($english ? 'Automatic failover' : '自动切换')
+                ->assertSee($english ? 'Alibaba Cloud' : '阿里云')
+                ->assertSee($english ? 'SMS signature' : '短信签名')
+                ->fillForm(['enabled' => true])->call('save')
+                ->assertHasFormErrors(['providers.aliyun.sign_name']);
+            self::assertSame($english ? 'SMS settings' : '短信配置', $page->instance()->getTitle());
+            self::assertSame($english ? 'SMS' : '短信', SmsSettingsPage::getNavigationLabel());
+            self::assertSame($english ? 'Preferences' : '偏好配置', SmsSettingsPage::getNavigationGroup());
+            self::assertStringContainsString($english ? 'Alibaba Cloud SMS signature' : '阿里云 短信签名', $page->instance()->getErrorBag()->first('data.providers.aliyun.sign_name'));
+            $settings = new SmsSettings;
+            $settings->timeout += 1;
+            $settings->save();
+            $page->fillForm(['enabled' => false])->call('save')->assertHasErrors(['data']);
+            self::assertSame(__('moonweft-preference::sms.errors.stale'), $page->instance()->getErrorBag()->first('data'));
+        }
+    }
+
+    public function test_sms_errors_and_translation_catalogues_cover_both_locales(): void
+    {
+        $english = Arr::dot(require __DIR__.'/../../resources/lang/en/sms.php');
+        $chinese = Arr::dot(require __DIR__.'/../../resources/lang/zh_CN/sms.php');
+        self::assertSame(array_keys($english), array_keys($chinese));
+        foreach (['en', 'zh_CN'] as $locale) {
+            app()->setLocale($locale);
+            foreach ($english as $key => $value) {
+                self::assertTrue(app('translator')->hasForLocale('moonweft-preference::sms.'.$key, $locale), $key);
+            }
+            try {
+                (new SmsSettings)->configuration();
+                self::fail('Disabled SMS must reject sending.');
+            } catch (\LogicException $exception) {
+                self::assertSame(__('moonweft-preference::sms.errors.disabled'), $exception->getMessage());
+            }
+            try {
+                (new SmsClient(['default' => ['gateways' => ['aliyun', 'qcloud', 'qiniu']]]))->send('13800138000', []);
+                self::fail('More than two gateways must be rejected.');
+            } catch (InvalidArgumentException $exception) {
+                self::assertSame(__('moonweft-preference::sms.errors.invalid_gateways'), $exception->getMessage());
+            }
+        }
+        DB::table('settings')->where('group', SmsSettings::group())->where('name', 'providers')
+            ->update(['payload' => json_encode('invalid-ciphertext')]);
+        app()->setLocale('en');
+        Livewire::actingAs($this->admin(), 'admin')->test(SmsSettingsPage::class)
+            ->assertSee('SMS settings are temporarily unavailable')
+            ->assertSee('Saved credentials could not be decrypted.')->call('save')->assertForbidden();
     }
 
     private function admin(string $permission = PreferencePermissionContributor::MANAGE_SMS): Admin
