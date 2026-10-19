@@ -188,7 +188,7 @@ final class SystemSettingsOctaneTest extends TestCase
             AccountAuthorization::create(['principal_provider' => 'admins', 'principal_id' => (string) $actor->id,
                 'role_ids' => [$role->id], 'organization_ids' => []]);
         }
-        $baseline = config('ai.providers.tencent');
+        $baseline = config('ai.providers.openai');
         $this->worker->application()->make('router')->post('/octane-test/asr', static function (Request $request): array {
             Filament::setCurrentPanel(Filament::getPanel('admin'));
             if ($actor = $request->attributes->get('octane_test_actor')) {
@@ -196,20 +196,20 @@ final class SystemSettingsOctaneTest extends TestCase
             }
             abort_if(app(SettingsAccess::class)->principal(PreferencePermissionContributor::MANAGE_AI) === null, 403);
             $settings = new AiSettings;
-            $settings->providers = ['tencent' => ['secret_id' => 'AKIDsynthetic'.$actor->id, 'key' => $request->input('key')]];
+            $settings->providers = ['openai' => ['key' => $request->input('key')]];
             $settings->save();
-            $before = config('ai.providers.tencent');
-            app(AiManager::class)->transcriptionProvider('tencent');
+            $before = config('ai.providers.openai');
+            app(AiManager::class)->transcriptionProvider('openai');
             try {
                 $credentialHash = app(AiConfiguration::class)->run(static function () use ($request): string {
-                    $credentials = app(AiManager::class)->transcriptionProvider('tencent')->providerCredentials();
+                    $credentials = app(AiManager::class)->transcriptionProvider('openai')->providerCredentials();
                     abort_if($request->boolean('fail'), 500, 'Synthetic ASR configuration failure');
 
                     return hash('sha256', $credentials['key']);
                 });
             } finally {
-                if (config('ai.providers.tencent') !== $before
-                    || app(AiManager::class)->transcriptionProvider('tencent')->providerCredentials()['key'] !== $before['key']) {
+                if (config('ai.providers.openai') !== $before
+                    || app(AiManager::class)->transcriptionProvider('openai')->providerCredentials()['key'] !== $before['key']) {
                     throw new \LogicException('Transcription credentials leaked.');
                 }
             }
@@ -226,7 +226,7 @@ final class SystemSettingsOctaneTest extends TestCase
             if ($status === 200) {
                 self::assertSame(['credential_hash' => hash('sha256', $key)], json_decode($response->getContent(), true));
             }
-            self::assertSame($baseline, $this->worker->application()->make('config')->get('ai.providers.tencent'));
+            self::assertSame($baseline, $this->worker->application()->make('config')->get('ai.providers.openai'));
         }
     }
 

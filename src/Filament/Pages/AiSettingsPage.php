@@ -176,9 +176,9 @@ final class AiSettingsPage extends SettingsPage
                     ->maxLength(4096)
                     ->placeholder('使用应用默认值');
 
-                if (in_array($field, $catalog->secretFields($name), true)) {
+                if ($field === 'key') {
                     $input->password()->revealable()->autocomplete('new-password')
-                        ->placeholder(fn (): string => filled(app(AiSettings::class)->providers[$name][$field] ?? null) ? '已保存，留空保留' : '未保存，留空使用环境配置');
+                        ->placeholder(fn (): string => filled(app(AiSettings::class)->providers[$name]['key'] ?? null) ? '已保存，留空保留' : '未保存，留空使用环境配置');
                 } elseif ($field === 'url') {
                     $input->url()->rules(['url:http,https'])->maxLength(2048)
                         ->helperText('填写完整接口根地址；留空使用应用默认地址。');
@@ -186,8 +186,6 @@ final class AiSettingsPage extends SettingsPage
                     $input->helperText('填写当前服务商实际支持且已评测的模型 ID。留空沿用默认模型，不自动选择 Pro 或 Smartest 别名。');
                 } elseif ($field === 'models.embeddings.dimensions') {
                     $input->integer()->minValue(1)->maxValue(65536);
-                } elseif ($catalog->driver($name) === 'tencent') {
-                    $input->placeholder('16k_zh')->helperText(__('moonweft-preference::transcription.engine_help'));
                 }
 
                 $fields[] = $input;
@@ -199,11 +197,7 @@ final class AiSettingsPage extends SettingsPage
 
             $tabs[] = Tab::make($label)->key('provider-'.$name)->schema([
                 Section::make($label)
-                    ->description(match ($catalog->driver($name)) {
-                        'bedrock' => '可使用 Bearer Token；AWS 凭据链及角色配置沿用应用环境。',
-                        'tencent' => __('moonweft-preference::transcription.description'),
-                        default => null,
-                    })
+                    ->description($catalog->driver($name) === 'bedrock' ? '可使用 Bearer Token；AWS 凭据链及角色配置沿用应用环境。' : null)
                     ->schema($fields)
                     ->columns(2),
             ]);
@@ -218,10 +212,9 @@ final class AiSettingsPage extends SettingsPage
     {
         $this->settingsVersion = $this->fingerprint($data);
 
-        foreach ($data['providers'] as $name => &$provider) {
-            foreach (app(ProviderCatalog::class)->secretFields($name) as $field) {
-                unset($provider[$field]);
-            }
+        $data['providers'] = array_intersect_key($data['providers'], app(ProviderCatalog::class)->options());
+        foreach ($data['providers'] as &$provider) {
+            unset($provider['key']);
         }
 
         return $data;
@@ -238,12 +231,12 @@ final class AiSettingsPage extends SettingsPage
                 $value = Arr::get($data, "providers.{$name}.{$field}");
                 $value = is_string($value) ? trim($value) : $value;
 
-                if (in_array($field, $catalog->secretFields($name), true)) {
+                if ($field === 'key') {
                     if (Arr::get($data, "providers.{$name}.remove_key", false)) {
                         continue;
                     }
 
-                    $value = filled($value) ? $value : ($current[$name][$field] ?? null);
+                    $value = filled($value) ? $value : ($current[$name]['key'] ?? null);
                 }
 
                 if (filled($value)) {
