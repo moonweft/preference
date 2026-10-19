@@ -11,6 +11,7 @@ use Laravel\Ai\Contracts\Providers\RerankingProvider;
 use Laravel\Ai\Contracts\Providers\TextProvider;
 use Laravel\Ai\Contracts\Providers\TranscriptionProvider;
 use Laravel\Ai\Providers;
+use MoonWeft\Ai\Providers\TencentAsrProvider;
 
 final class ProviderCatalog
 {
@@ -40,6 +41,7 @@ final class ProviderCatalog
         'mistral' => ['Mistral', Providers\MistralProvider::class],
         'voyageai' => ['VoyageAI', Providers\VoyageAiProvider::class],
         'xai' => ['xAI', Providers\XaiProvider::class],
+        'tencent' => ['Tencent ASR', TencentAsrProvider::class],
     ];
 
     /** @return array<string, string> */
@@ -89,6 +91,11 @@ final class ProviderCatalog
     /** @return array<string, string> */
     public function fields(string $name): array
     {
+        if ($this->driver($name) === 'tencent') {
+            return ['secret_id' => 'SecretId', 'key' => 'SecretKey',
+                'models.transcription.default' => __('moonweft-preference::transcription.engine')];
+        }
+
         $fields = ['key' => 'API 密钥'];
 
         if ($this->driver($name) === 'bedrock') {
@@ -122,5 +129,11 @@ final class ProviderCatalog
         }
 
         return $fields;
+    }
+
+    /** Credentials are never hydrated into a browser form. */
+    public function secretFields(string $name): array
+    {
+        return $this->driver($name) === 'tencent' ? ['secret_id', 'key'] : ['key'];
     }
 }

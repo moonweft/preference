@@ -15,6 +15,7 @@ use MoonWeft\Iam\PermissionSynchronizer;
 use Moonweft\Preference\Ai\AiConfiguration;
 use Moonweft\Preference\Ai\AiSettings;
 use Moonweft\Preference\Filament\Pages\AiSettingsPage;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use Tests\TestCase;
 
 final class AiExecutionSettingsTest extends TestCase
@@ -53,8 +54,11 @@ final class AiExecutionSettingsTest extends TestCase
         self::assertSame($before, config('moonweft-ai.limits'));
     }
 
+    #[RunInSeparateProcess]
     public function test_execution_budgets_and_model_profiles_round_trip_through_the_authorised_page(): void
     {
+        // Full Host fixtures and provider-tab HTML coexist in Livewire's test snapshots.
+        ini_set('memory_limit', '256M');
         app(PermissionSynchronizer::class)->sync();
         Filament::setCurrentPanel(Filament::getPanel('admin'));
         $admin = Admin::factory()->create();
@@ -64,10 +68,10 @@ final class AiExecutionSettingsTest extends TestCase
             'max_steps' => 5, 'max_tool_calls' => 10, 'max_tool_calls_per_tool' => 2,
             'max_tool_result_bytes' => 32768, 'max_run_seconds' => 90, 'max_run_tokens' => 32000];
         Livewire::actingAs($admin, 'admin')->test(AiSettingsPage::class)
-            ->set('data.limits', $limits)
-            ->set('data.providers.deepseek.models.text.simple', 'evaluated-small')
-            ->set('data.providers.deepseek.models.text.complex', 'evaluated-large')
-            ->set('data.providers.deepseek.reasoning_effort', 'low')
+            ->set(['data.limits' => $limits,
+                'data.providers.deepseek.models.text.simple' => 'evaluated-small',
+                'data.providers.deepseek.models.text.complex' => 'evaluated-large',
+                'data.providers.deepseek.reasoning_effort' => 'low'])
             ->call('save')->assertHasNoErrors();
         self::assertSame($limits, (new AiSettings)->limits);
         self::assertSame(5, app(RequestLimits::class)->all()['max_steps']);

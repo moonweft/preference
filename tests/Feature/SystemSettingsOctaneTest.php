@@ -11,6 +11,7 @@ use Filament\Support\Facades\FilamentTimezone;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Laravel\Ai\AiManager;
 use Laravel\Octane\ApplicationFactory;
 use Laravel\Octane\Contracts\Client;
 use Laravel\Octane\Events\WorkerErrorOccurred;
@@ -27,6 +28,7 @@ use Moonweft\Preference\Ai\AiConfiguration;
 use Moonweft\Preference\Ai\AiSettings;
 use Moonweft\Preference\Filament\Pages\SystemSettingsPage;
 use Moonweft\Preference\PreferencePermissionContributor;
+use Moonweft\Preference\SettingsAccess;
 use Moonweft\Preference\System\SystemSettings;
 use PHPUnit\Framework\TestCase;
 use Spatie\Permission\Models\Role;
@@ -172,6 +174,59 @@ final class SystemSettingsOctaneTest extends TestCase
                 self::assertSame(['effort' => $effort ?? $baseline, 'restored' => $baseline], json_decode($response->getContent(), true));
             }
             self::assertSame($baseline, $this->worker->application()->make('config')->get('ai.providers.deepseek.reasoning_effort'));
+        }
+    }
+
+    public function test_transcription_credentials_refresh_and_restore_across_authorised_requests(): void
+    {
+        self::assertSame(0, Artisan::call('migrate', ['--force' => true]));
+        app(PermissionSynchronizer::class)->sync();
+        $actors = Admin::factory()->count(2)->create();
+        $role = Role::create(['name' => 'asr-settings-test', 'guard_name' => 'admin']);
+        $role->givePermissionTo(IamPermission::PanelAccess->value, PreferencePermissionContributor::MANAGE_AI);
+        foreach ($actors as $actor) {
+            AccountAuthorization::create(['principal_provider' => 'admins', 'principal_id' => (string) $actor->id,
+                'role_ids' => [$role->id], 'organization_ids' => []]);
+        }
+        $baseline = config('ai.providers.tencent');
+        $this->worker->application()->make('router')->post('/octane-test/asr', static function (Request $request): array {
+            Filament::setCurrentPanel(Filament::getPanel('admin'));
+            if ($actor = $request->attributes->get('octane_test_actor')) {
+                auth('admin')->setUser($actor);
+            }
+            abort_if(app(SettingsAccess::class)->principal(PreferencePermissionContributor::MANAGE_AI) === null, 403);
+            $settings = new AiSettings;
+            $settings->providers = ['tencent' => ['secret_id' => 'AKIDsynthetic'.$actor->id, 'key' => $request->input('key')]];
+            $settings->save();
+            $before = config('ai.providers.tencent');
+            app(AiManager::class)->transcriptionProvider('tencent');
+            try {
+                $credentialHash = app(AiConfiguration::class)->run(static function () use ($request): string {
+                    $credentials = app(AiManager::class)->transcriptionProvider('tencent')->providerCredentials();
+                    abort_if($request->boolean('fail'), 500, 'Synthetic ASR configuration failure');
+
+                    return hash('sha256', $credentials['key']);
+                });
+            } finally {
+                if (config('ai.providers.tencent') !== $before
+                    || app(AiManager::class)->transcriptionProvider('tencent')->providerCredentials()['key'] !== $before['key']) {
+                    throw new \LogicException('Transcription credentials leaked.');
+                }
+            }
+
+            return ['credential_hash' => $credentialHash];
+        });
+        foreach ([[0, 'synthetic-a', false, 200], [1, 'synthetic-b', false, 200], [0, 'synthetic-a', false, 200],
+            [null, 'missing', false, 403], [1, 'synthetic-failure', true, 500], [0, 'synthetic-after', false, 200]] as [$index, $key, $fail, $status]) {
+            $request = Request::create('/octane-test/asr', 'POST', ['key' => $key, 'fail' => $fail], server: ['HTTP_ACCEPT' => 'application/json']);
+            $request->attributes->set('octane_test_actor', $index === null ? null : $actors[$index]);
+            $this->worker->handle($request, new RequestContext);
+            $response = array_pop($this->responses);
+            self::assertSame($status, $response->getStatusCode(), $response->getContent());
+            if ($status === 200) {
+                self::assertSame(['credential_hash' => hash('sha256', $key)], json_decode($response->getContent(), true));
+            }
+            self::assertSame($baseline, $this->worker->application()->make('config')->get('ai.providers.tencent'));
         }
     }
 

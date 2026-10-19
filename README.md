@@ -2,6 +2,12 @@
 
 `moonweft/preference` 管理 host 级系统配置，包括统一日期时间显示和 Laravel AI SDK 配置。
 
+腾讯语音转文字使用「AI → Tencent ASR」Tab，填写 SecretId、SecretKey 和引擎（默认 `16k_zh`），
+并将默认「语音转文字」服务商设为 Tencent ASR。凭据沿用加密的 `providers` 设置；加载页面不返回原凭据，
+留空保留，移除密钥同时清除两项。聊天模型保持独立。驱动属于 AI 模块，通过原生 Laravel AI
+`Transcription` 调用；需在 `AiConfiguration::run()` 内读取系统覆盖配置。当前采用最长 60 秒的一句话识别，
+不包含浏览器录音 UI。详见 AI 模块的 `docs/transcription.md`。
+
 ## 系统设置
 
 入口为后台 **偏好配置 → 系统**（`/admin/system/settings`），管理整个 Host 共用的
