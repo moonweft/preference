@@ -11,7 +11,7 @@
     gap: .75rem;
     padding: 1rem;
     border: 1px solid var(--gray-200);
-    border-radius: .75rem;
+    border-radius: 0;
     background: white;
     cursor: pointer;
     transition: border-color .15s, box-shadow .15s;
@@ -29,7 +29,7 @@
 .dark .mw-appearance-selected { color: var(--primary-400); }
 .mw-appearance-option:has(input:checked) .mw-appearance-selected { display: inline; }
 .mw-appearance-options-theme .mw-appearance-selected { bottom: auto; top: 1rem; right: 3rem; }
-.mw-appearance-preview { display: flex; gap: .6rem; height: 7.5rem; overflow: hidden; padding: .6rem; border: 1px solid var(--preview-border); background: var(--preview-background); border-radius: .4rem; }
+.mw-appearance-preview { display: flex; gap: .6rem; height: 7.5rem; overflow: hidden; padding: .6rem; border: 1px solid var(--preview-border); background: var(--preview-background); border-radius: 0; }
 .mw-appearance-options-theme .mw-appearance-preview { height: 11rem; margin-top: 1.5rem; }
 .mw-preview-sidebar { display: flex; flex-direction: column; gap: .5rem; width: 24%; padding: .5rem; background: var(--preview-soft); }
 .mw-preview-sidebar i { display: block; height: .3rem; background: var(--preview-muted); border-radius: 1rem; }
@@ -43,5 +43,5 @@
 .mw-preview-sharp, .mw-preview-sharp .mw-preview-sidebar, .mw-preview-sharp .mw-preview-cards i, .mw-preview-sharp .mw-preview-table { border-radius: 0; }
 .mw-preview-orbit .mw-preview-sidebar, .mw-preview-orbit .mw-preview-cards i, .mw-preview-orbit .mw-preview-table { border-radius: .7rem; box-shadow: 0 3px 6px #0000000a; }
 .mw-preview-orbit { padding: 1rem; gap: 1rem; border-radius: 1rem; }
-.mw-appearance-swatches { display: flex; overflow: hidden; height: .65rem; border-radius: .3rem; }
+.mw-appearance-swatches { display: flex; overflow: hidden; height: .65rem; border-radius: 0; }
 .mw-appearance-swatches i { flex: 1; }
