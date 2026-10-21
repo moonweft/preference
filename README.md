@@ -16,8 +16,9 @@
 没有颜色下拉框。升级保留已有颜色；原有组合不在预设中时，额外显示「当前配色」卡片。
 主色用于按钮、链接和选中状态，业务状态颜色保留原有含义。
 
-浅色、深色和跟随系统属于单独的「显示模式」。设置应用于接入 PreferencePlugin 的后台
-及登录页，所有管理员共用；每次加载同步平台明暗模式，替代浏览器中的旧个人主题选择。
+主题与配色应用于接入 PreferencePlugin 的后台及登录页，所有管理员共用。
+浅色、深色和跟随系统使用 Filament 自带的用户菜单切换器，由各浏览器保存个人选择。
+主题页不再配置明暗模式，也不写入或覆盖浏览器的明暗偏好；升级迁移移除旧的系统明暗设置。
 保存后当前页面重新加载，其他已打开页面刷新后生效。独立门户不在本次后台主题范围内。
 系统页保留日期时间设置，两页复用 `preference.system.manage` 权限、并发保护和审计。
 修改其中一页不会覆盖另一页的配置；过期页面仍须刷新后再保存。
@@ -66,7 +67,7 @@ php artisan octane:reload
 php artisan queue:restart
 ```
 
-迁移仅新增日期时间和外观设置，不修改历史业务时间。验证使用
+迁移管理日期时间和外观设置，不修改历史业务时间。验证使用
 `modules/preference/tests/Feature/SystemSettingsTest.php` 和
 `modules/preference/tests/Feature/SystemSettingsOctaneTest.php`，以及
 `modules/preference/tests/Feature/SystemAppearanceOctaneTest.php`（在 Host 根目录运行 PHPUnit），覆盖

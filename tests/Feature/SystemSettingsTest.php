@@ -57,7 +57,7 @@ final class SystemSettingsTest extends TestCase
 
         $this->assertSame([
             'timezone' => 'Asia/Shanghai', 'date_format' => 'd/m/Y', 'time_format' => 'h:i A',
-            'theme_mode' => 'system', 'primary_color' => 'blue', 'gray_color' => 'slate', 'panel_theme' => 'sharp',
+            'primary_color' => 'blue', 'gray_color' => 'slate', 'panel_theme' => 'sharp',
         ], (new SystemSettings)->toArray());
     }
 
@@ -79,12 +79,12 @@ final class SystemSettingsTest extends TestCase
         $this->grant($admin);
 
         Livewire::actingAs($admin, 'admin')->test(ThemeSettingsPage::class)
-            ->fillForm(['panel_theme' => 'orbit', 'theme_mode' => 'dark', 'color_scheme' => 'violet'])
+            ->fillForm(['panel_theme' => 'orbit', 'color_scheme' => 'violet'])
             ->call('save')->assertHasNoFormErrors()->assertRedirect(ThemeSettingsPage::getUrl());
 
         $settings = new SystemSettings;
-        $this->assertSame(['orbit', 'dark', 'violet', 'slate', 'UTC'], [
-            $settings->panel_theme, $settings->theme_mode, $settings->primary_color, $settings->gray_color, $settings->timezone,
+        $this->assertSame(['orbit', 'violet', 'slate', 'UTC'], [
+            $settings->panel_theme, $settings->primary_color, $settings->gray_color, $settings->timezone,
         ]);
     }
 
@@ -94,7 +94,6 @@ final class SystemSettingsTest extends TestCase
         $this->grant($admin);
         $this->actingAs($admin, 'admin');
         $settings = new SystemSettings;
-        $settings->theme_mode = 'invalid';
         $settings->primary_color = '</style><script>alert(1)</script>';
         $settings->gray_color = 'blue';
         $settings->panel_theme = '../unknown.css';
@@ -103,22 +102,22 @@ final class SystemSettingsTest extends TestCase
             $settings->save();
             $this->fail('Invalid appearance was saved.');
         } catch (ValidationException $exception) {
-            $this->assertSame(['theme_mode', 'primary_color', 'gray_color', 'panel_theme'], array_keys($exception->errors()));
+            $this->assertSame(['primary_color', 'gray_color', 'panel_theme'], array_keys($exception->errors()));
         }
     }
 
     public function test_saved_appearance_is_used_by_the_panel_and_public_login_page(): void
     {
-        foreach (['theme_mode' => 'dark', 'primary_color' => 'violet', 'gray_color' => 'stone'] as $name => $value) {
+        foreach (['primary_color' => 'violet', 'gray_color' => 'stone'] as $name => $value) {
             DB::table('settings')->where('group', 'preference_system')->where('name', $name)->update(['payload' => json_encode($value)]);
         }
         $panel = Filament::getPanel('admin');
-        $this->assertSame([Color::Violet, Color::Stone, true, true, false], [
+        $this->assertSame([Color::Violet, Color::Stone, true, false, true], [
             $panel->getColors()['primary'], $panel->getColors()['gray'], $panel->hasDarkMode(),
             $panel->hasDarkModeForced(), $panel->hasThemeSwitcher(),
         ]);
         $this->withoutVite()->get('/admin/login')->assertSuccessful()
-            ->assertSee('data-system-theme="dark"', false)
+            ->assertDontSee('data-system-theme', false)
             ->assertSee('--primary-500:'.Color::Violet[500], false)
             ->assertSee('--gray-500:'.Color::Stone[500], false);
     }
@@ -151,6 +150,17 @@ final class SystemSettingsTest extends TestCase
             app()->setLocale($locale);
             $this->assertSame($label, ThemeSettingsPage::getNavigationLabel());
         }
+    }
+
+    public function test_theme_page_uses_the_native_personal_mode_switcher(): void
+    {
+        $this->assertTrue(Filament::getPanel('admin')->hasThemeSwitcher());
+        $admin = Admin::factory()->create();
+        $this->grant($admin);
+        $this->withoutVite()->actingAs($admin, 'admin')->get(ThemeSettingsPage::getUrl())
+            ->assertSuccessful()->assertSee('class="fi-theme-switcher"', false)
+            ->assertDontSee('data.theme_mode', false)->assertDontSee('data-system-theme', false);
+        $this->assertDatabaseMissing('settings', ['group' => 'preference_system', 'name' => 'theme_mode']);
     }
 
     public function test_theme_page_preserves_existing_colour_pairings_until_a_scheme_is_selected(): void

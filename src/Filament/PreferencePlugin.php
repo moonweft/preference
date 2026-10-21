@@ -7,7 +7,6 @@ namespace Moonweft\Preference\Filament;
 use Filament\Contracts\Plugin;
 use Filament\Panel;
 use Filament\Support\Assets\Theme;
-use Filament\View\PanelsRenderHook;
 use Illuminate\Foundation\Vite;
 use Moonweft\Preference\Filament\Pages\AiSettingsPage;
 use Moonweft\Preference\Filament\Pages\SmsSettingsPage;
@@ -35,15 +34,7 @@ final class PreferencePlugin implements Plugin
                 Appearance::THEMES[app(SystemSettings::class)->panel_theme],
             )))
             ->topbar(static fn (): bool => app(SystemSettings::class)->panel_theme !== 'sharp')
-            ->colors(static fn (): array => app(SystemSettings::class)->colors())
-            ->darkMode(
-                static fn (): bool => app(SystemSettings::class)->theme_mode !== 'light',
-                isForced: static fn (): bool => app(SystemSettings::class)->theme_mode === 'dark',
-            )
-            ->themeSwitcher(false)
-            ->renderHook(PanelsRenderHook::HEAD_START, static fn () => view('moonweft-preference::appearance', [
-                'mode' => app(SystemSettings::class)->theme_mode,
-            ]));
+            ->colors(static fn (): array => app(SystemSettings::class)->colors());
     }
 
     public function boot(Panel $panel): void {}

@@ -73,7 +73,7 @@ final class SystemAppearanceOctaneTest extends TestCase
                 }
                 $settings = app(SystemSettings::class);
                 if ($request->isMethod('POST')) {
-                    $settings->fill($request->only(['theme_mode', 'primary_color', 'gray_color', 'panel_theme']));
+                    $settings->fill($request->only(['primary_color', 'gray_color', 'panel_theme']));
                     if ($request->boolean('fail')) {
                         Filament::bootCurrentPanel();
                         FilamentColor::getColors();
@@ -86,23 +86,23 @@ final class SystemAppearanceOctaneTest extends TestCase
                 Filament::bootCurrentPanel();
 
                 return [
-                    $previousActor, SystemSettingsPage::canAccess(), $settings->theme_mode,
+                    $previousActor, SystemSettingsPage::canAccess(),
                     FilamentColor::getColor('primary'), FilamentColor::getColor('gray'),
                     $panel->hasDarkMode(), $panel->hasDarkModeForced(), $panel->hasThemeSwitcher(),
-                    str_contains(FilamentView::renderHook(PanelsRenderHook::HEAD_START)->toHtml(), 'data-system-theme="'.$settings->theme_mode.'"'),
+                    str_contains(FilamentView::renderHook(PanelsRenderHook::HEAD_START)->toHtml(), 'data-system-theme'),
                     str_contains($panel->getTheme()->getHtml()->toHtml(), app(Vite::class)->asset(Appearance::THEMES[$settings->panel_theme])),
                     $panel->hasTopbar(),
                 ];
             });
 
-            foreach ([[0, 'dark', 'violet', 'stone', 'sharp'], [1, 'light', 'emerald', 'zinc', 'orbit'], [0, 'system', 'blue', 'slate', 'sharp']] as [$actor, $mode, $primary, $gray, $theme]) {
-                $request = Request::create('/octane-test/appearance', 'POST', ['theme_mode' => $mode, 'primary_color' => $primary, 'gray_color' => $gray, 'panel_theme' => $theme], server: ['HTTP_ACCEPT' => 'application/json']);
+            foreach ([[0, 'violet', 'stone', 'sharp'], [1, 'emerald', 'zinc', 'orbit'], [0, 'blue', 'slate', 'sharp']] as [$actor, $primary, $gray, $theme]) {
+                $request = Request::create('/octane-test/appearance', 'POST', ['primary_color' => $primary, 'gray_color' => $gray, 'panel_theme' => $theme], server: ['HTTP_ACCEPT' => 'application/json']);
                 $request->attributes->set('test_actor', $actors[$actor]);
                 $worker->handle($request, new RequestContext);
                 self::assertSame(200, $response->getStatusCode(), $response->getContent());
 
                 $worker->handle(Request::create('/octane-test/appearance'), new RequestContext);
-                self::assertSame([null, false, $mode, Color::all()[$primary], Color::all()[$gray], $mode !== 'light', $mode === 'dark', false, true, true, $theme !== 'sharp'], json_decode($response->getContent(), true));
+                self::assertSame([null, false, Color::all()[$primary], Color::all()[$gray], true, false, true, false, true, $theme !== 'sharp'], json_decode($response->getContent(), true));
             }
 
             // Both missing authority and an exception must leave the shared appearance intact.
@@ -112,7 +112,7 @@ final class SystemAppearanceOctaneTest extends TestCase
                 $worker->handle($request, new RequestContext);
                 self::assertSame($status, $response->getStatusCode());
                 $worker->handle(Request::create('/octane-test/appearance'), new RequestContext);
-                self::assertSame([null, false, 'system', Color::Blue, Color::Slate, true, false, false, true, true, false], json_decode($response->getContent(), true));
+                self::assertSame([null, false, Color::Blue, Color::Slate, true, false, true, false, true, false], json_decode($response->getContent(), true));
             }
 
             $worker->handleTask(static function () use ($role): void {

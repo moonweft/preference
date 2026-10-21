@@ -34,8 +34,6 @@ final class SystemSettings extends Settings
         'h:i A' => '02:30 PM',
     ];
 
-    public const THEME_MODES = ['system', 'light', 'dark'];
-
     public const PRIMARY_COLORS = ['blue', 'indigo', 'violet', 'purple', 'rose', 'orange', 'amber', 'emerald', 'teal', 'cyan', 'lime', 'fuchsia'];
 
     public const GRAY_COLORS = ['slate', 'gray', 'zinc', 'neutral', 'stone'];
@@ -45,8 +43,6 @@ final class SystemSettings extends Settings
     public string $date_format = 'Y-m-d';
 
     public string $time_format = 'H:i:s';
-
-    public string $theme_mode = 'system';
 
     public string $primary_color = 'blue';
 
@@ -98,7 +94,6 @@ final class SystemSettings extends Settings
             'timezone' => ['required', Rule::in(array_keys(self::timezones()))],
             'date_format' => ['required', Rule::in(array_keys(self::DATE_FORMATS))],
             'time_format' => ['required', Rule::in(array_keys(self::TIME_FORMATS))],
-            'theme_mode' => ['required', Rule::in(self::THEME_MODES)],
             'primary_color' => ['required', Rule::in(self::PRIMARY_COLORS)],
             'gray_color' => ['required', Rule::in(self::GRAY_COLORS)],
             'panel_theme' => ['required', Rule::in(array_keys(Appearance::THEMES))],
