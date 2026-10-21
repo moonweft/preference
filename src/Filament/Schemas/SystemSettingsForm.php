@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Moonweft\Preference\Filament\Schemas;
 
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\ToggleButtons;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 use Moonweft\Preference\System\SystemSettings;
 
 final class SystemSettingsForm
@@ -14,19 +16,33 @@ final class SystemSettingsForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('日期与时间')
-                ->description('对整个系统的默认时间显示和日期时间输入生效，所有用户与组织共用。保存后刷新页面生效。')
+            Section::make(__('moonweft-preference::system.appearance.title'))
+                ->description(__('moonweft-preference::system.appearance.description'))
                 ->schema([
-                    Select::make('timezone')->label('系统时区')
+                    ToggleButtons::make('theme_mode')->label(__('moonweft-preference::system.fields.theme_mode'))
+                        ->options(__('moonweft-preference::system.theme_modes'))
+                        ->icons(['system' => Heroicon::OutlinedComputerDesktop, 'light' => Heroicon::OutlinedSun, 'dark' => Heroicon::OutlinedMoon])
+                        ->inline()->required()->columnSpanFull(),
+                    Select::make('primary_color')->label(__('moonweft-preference::system.fields.primary_color'))
+                        ->options(__('moonweft-preference::system.primary_colors'))->required()
+                        ->helperText(__('moonweft-preference::system.appearance.primary_help')),
+                    Select::make('gray_color')->label(__('moonweft-preference::system.fields.gray_color'))
+                        ->options(__('moonweft-preference::system.gray_colors'))->required()
+                        ->helperText(__('moonweft-preference::system.appearance.gray_help')),
+                ])->columns(2)->columnSpanFull(),
+            Section::make(__('moonweft-preference::system.datetime.title'))
+                ->description(__('moonweft-preference::system.datetime.description'))
+                ->schema([
+                    Select::make('timezone')->label(__('moonweft-preference::system.fields.timezone'))
                         ->options(SystemSettings::timezones())->searchable()->required()
-                        ->helperText('使用 IANA 时区，例如 Asia/Shanghai（北京时间）。自动遵循所选地区的夏令时。'),
-                    Select::make('date_format')->label('日期格式')
-                        ->options(SystemSettings::DATE_FORMATS)->required(),
-                    Select::make('time_format')->label('时间格式')
-                        ->options(SystemSettings::TIME_FORMATS)->required(),
+                        ->helperText(__('moonweft-preference::system.datetime.timezone_help')),
+                    Select::make('date_format')->label(__('moonweft-preference::system.fields.date_format'))
+                        ->options(__('moonweft-preference::system.date_formats'))->required(),
+                    Select::make('time_format')->label(__('moonweft-preference::system.fields.time_format'))
+                        ->options(__('moonweft-preference::system.time_formats'))->required(),
                 ])->columns(3)->columnSpanFull(),
-            Section::make('生效范围')
-                ->description('统一后台表格、详情和日期时间选择器的默认格式。已保存的时间点保持不变；生日等纯日期和每天的固定时间不随时区换算。业务截止时间、统计周期和定时执行规则由各业务模块决定。')
+            Section::make(__('moonweft-preference::system.scope.title'))
+                ->description(__('moonweft-preference::system.scope.description'))
                 ->columnSpanFull(),
         ]);
     }

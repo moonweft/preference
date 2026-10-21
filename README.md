@@ -1,11 +1,23 @@
 # 系统配置
 
-`moonweft/preference` 管理 host 级系统配置，包括统一日期时间显示和 Laravel AI SDK 配置。
+`moonweft/preference` 管理 host 级系统配置，包括统一后台主题、配色、日期时间显示和 Laravel AI SDK 配置。
 
 语音转文字使用 Laravel AI SDK 已支持的服务商，在 AI 配置中选择默认服务商并配置凭据。
 业务调用通过 `AiConfiguration::run()` 应用系统配置，继续使用原生 `Transcription` 接口。
 
 ## 系统设置
+
+后台 **偏好配置 → 系统**（`/admin/system/settings`）的「主题与配色」提供浅色、深色、
+跟随系统三种模式、10 种主色和 5 种中性色。默认跟随设备系统、蓝色主色和蓝灰中性色，
+沿用现有后台布局。主题作用于接入 PreferencePlugin 的后台及其登录页，所有管理员共用；
+每次加载同步平台主题，替代浏览器中旧的个人主题选择，不再显示重复的个人主题切换器。
+主色用于按钮、链接和选中状态，中性色用于背景、边框及正文，业务状态颜色保留原有含义。
+保存后当前设置页自动重新加载，其他已打开页面刷新后生效；无需为改配色重建前端资源。
+独立门户或未接入插件的页面不在本次外观设置范围内。
+
+系统设置页面和校验文案支持 `zh_CN` / `en`，语言文件为
+`resources/lang/{locale}/system.php`，按当前请求解析。配色只接受预设色板，后端拒绝任意
+CSS 或不受支持的颜色值。主题沿用 `preference.system.manage` 权限、并发保护和审计。
 
 入口为后台 **偏好配置 → 系统**（`/admin/system/settings`），管理整个 Host 共用的
 IANA 时区、日期格式和时间格式。时间格式支持 12 / 24 小时及是否显示秒，日期时间格式由
@@ -37,17 +49,18 @@ $display = app(SystemSettings::class)->formatDateTime($record->created_at);
 之后仅修改设置值不需要重启：
 
 ```sh
-php artisan migrate --path=modules/preference/database/settings/2026_10_14_000001_create_system_settings.php
+php artisan migrate --path=modules/preference/database/settings
 php artisan iam:sync
 php artisan octane:reload
 php artisan queue:restart
 ```
 
-迁移只新增三个设置，不修改历史业务时间。验证使用
+迁移仅新增日期时间和外观设置，不修改历史业务时间。验证使用
 `modules/preference/tests/Feature/SystemSettingsTest.php` 和
-`modules/preference/tests/Feature/SystemSettingsOctaneTest.php`（在 Host 根目录运行 PHPUnit），覆盖
+`modules/preference/tests/Feature/SystemSettingsOctaneTest.php`，以及
+`modules/preference/tests/Feature/SystemAppearanceOctaneTest.php`（在 Host 根目录运行 PHPUnit），覆盖
 实际表单保存、IAM 拒绝、并发覆盖、夏令时、跨日显示、输入 UTC 往返，以及同一 Octane
-worker 的 A → B → A 请求、缺失写入身份、异常恢复和连续任务。该配置自身没有组织私有
+worker 的 A → B → A 请求、主题色板刷新、缺失写入身份、异常恢复和连续任务。该配置自身没有组织私有
 数据；这些验证不代表其他模块的数据隔离已完成审计。
 
 参考：[Filament 日期时间选择器](https://filamentphp.com/docs/5.x/forms/date-time-picker)。

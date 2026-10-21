@@ -5,7 +5,7 @@ return [
     'system' => [
         'group' => '系统设置',
         'label' => '管理系统设置',
-        'description' => '维护平台统一时区、日期与时间格式。',
+        'description' => '维护平台统一主题、配色、时区、日期与时间格式。',
     ],
     'ai' => [
         'group' => '人工智能',

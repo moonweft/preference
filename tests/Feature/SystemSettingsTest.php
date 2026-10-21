@@ -10,6 +10,7 @@ use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\TimePicker;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
+use Filament\Support\Colors\Color;
 use Filament\Support\Facades\FilamentTimezone;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Contracts\HasTable;
@@ -52,7 +53,10 @@ final class SystemSettingsTest extends TestCase
             ->fillForm(['timezone' => 'Asia/Shanghai', 'date_format' => 'd/m/Y', 'time_format' => 'h:i A'])
             ->call('save')->assertHasNoFormErrors();
 
-        $this->assertSame(['timezone' => 'Asia/Shanghai', 'date_format' => 'd/m/Y', 'time_format' => 'h:i A'], (new SystemSettings)->toArray());
+        $this->assertSame([
+            'timezone' => 'Asia/Shanghai', 'date_format' => 'd/m/Y', 'time_format' => 'h:i A',
+            'theme_mode' => 'system', 'primary_color' => 'blue', 'gray_color' => 'slate',
+        ], (new SystemSettings)->toArray());
     }
 
     public function test_reading_and_saving_require_current_system_permission(): void
@@ -65,6 +69,69 @@ final class SystemSettingsTest extends TestCase
         $page = Livewire::actingAs($admin, 'admin')->test(SystemSettingsPage::class);
         $role->revokePermissionTo(PreferencePermissionContributor::MANAGE_SYSTEM);
         $page->call('save')->assertForbidden();
+    }
+
+    public function test_administrator_can_save_theme_and_colours_and_reload_the_page(): void
+    {
+        $admin = Admin::factory()->create();
+        $this->grant($admin);
+
+        Livewire::actingAs($admin, 'admin')->test(SystemSettingsPage::class)
+            ->fillForm(['theme_mode' => 'dark', 'primary_color' => 'violet', 'gray_color' => 'stone'])
+            ->call('save')->assertHasNoFormErrors()->assertRedirect(SystemSettingsPage::getUrl());
+
+        $settings = new SystemSettings;
+        $this->assertSame(['dark', 'violet', 'stone', 'UTC'], [
+            $settings->theme_mode, $settings->primary_color, $settings->gray_color, $settings->timezone,
+        ]);
+    }
+
+    public function test_backend_rejects_invalid_theme_and_colour_values(): void
+    {
+        $admin = Admin::factory()->create();
+        $this->grant($admin);
+        $this->actingAs($admin, 'admin');
+        $settings = new SystemSettings;
+        $settings->theme_mode = 'invalid';
+        $settings->primary_color = '</style><script>alert(1)</script>';
+        $settings->gray_color = 'blue';
+
+        try {
+            $settings->save();
+            $this->fail('Invalid appearance was saved.');
+        } catch (ValidationException $exception) {
+            $this->assertSame(['theme_mode', 'primary_color', 'gray_color'], array_keys($exception->errors()));
+        }
+    }
+
+    public function test_saved_appearance_is_used_by_the_panel_and_public_login_page(): void
+    {
+        foreach (['theme_mode' => 'dark', 'primary_color' => 'violet', 'gray_color' => 'stone'] as $name => $value) {
+            DB::table('settings')->where('group', 'preference_system')->where('name', $name)->update(['payload' => json_encode($value)]);
+        }
+        $panel = Filament::getPanel('admin');
+        $this->assertSame([Color::Violet, Color::Stone, true, true, false], [
+            $panel->getColors()['primary'], $panel->getColors()['gray'], $panel->hasDarkMode(),
+            $panel->hasDarkModeForced(), $panel->hasThemeSwitcher(),
+        ]);
+        $this->withoutVite()->get('/admin/login')->assertSuccessful()
+            ->assertSee('data-system-theme="dark"', false)
+            ->assertSee('--primary-500:'.Color::Violet[500], false)
+            ->assertSee('--gray-500:'.Color::Stone[500], false);
+    }
+
+    public function test_system_settings_copy_follows_the_current_language(): void
+    {
+        $admin = Admin::factory()->create();
+        $this->grant($admin);
+        foreach (['en' => ['System settings', 'System', 'Preferences', 'Theme and colours'],
+            'zh_CN' => ['系统设置', '系统', '偏好配置', '主题与配色']] as $locale => $labels) {
+            app()->setLocale($locale);
+            $page = Livewire::actingAs($admin, 'admin')->test(SystemSettingsPage::class)->assertSee($labels[3]);
+            $this->assertSame(array_slice($labels, 0, 3), [
+                $page->instance()->getTitle(), SystemSettingsPage::getNavigationLabel(), SystemSettingsPage::getNavigationGroup(),
+            ]);
+        }
     }
 
     public function test_switching_administrators_invalidates_the_editing_session(): void
@@ -119,6 +186,7 @@ final class SystemSettingsTest extends TestCase
 
     public function test_filament_defaults_convert_instants_but_preserve_calendar_dates_and_storage_timezone(): void
     {
+        app()->setLocale('en');
         foreach (['timezone' => 'America/New_York', 'date_format' => 'd/m/Y', 'time_format' => 'h:i A'] as $name => $value) {
             DB::table('settings')->where('group', 'preference_system')->where('name', $name)->update(['payload' => json_encode($value)]);
         }

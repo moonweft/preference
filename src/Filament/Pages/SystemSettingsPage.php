@@ -15,17 +15,10 @@ use Moonweft\Preference\PreferencePermissionContributor;
 use Moonweft\Preference\SettingsAccess;
 use Moonweft\Preference\System\SystemSettings;
 use Spatie\LaravelSettings\SettingsRepositories\DatabaseSettingsRepository;
-use UnitEnum;
 
 final class SystemSettingsPage extends SettingsPage
 {
     protected static string $settings = SystemSettings::class;
-
-    protected static ?string $title = '系统设置';
-
-    protected static ?string $navigationLabel = '系统';
-
-    protected static string|UnitEnum|null $navigationGroup = '偏好配置';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCog6Tooth;
 
@@ -40,6 +33,26 @@ final class SystemSettingsPage extends SettingsPage
 
     #[Locked]
     public string $settingsVersion = '';
+
+    public function getTitle(): string
+    {
+        return __('moonweft-preference::system.title');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('moonweft-preference::system.navigation_label');
+    }
+
+    public static function getNavigationGroup(): string
+    {
+        return __('moonweft-preference::system.navigation_group');
+    }
+
+    public function getRedirectUrl(): ?string
+    {
+        return self::getUrl();
+    }
 
     public static function canAccess(): bool
     {
@@ -91,7 +104,7 @@ final class SystemSettingsPage extends SettingsPage
             $current[$row->getAttribute('name')] = $decoder($row->getAttribute('payload'), true);
         }
         if (! hash_equals($this->settingsVersion, $this->fingerprint($current))) {
-            throw ValidationException::withMessages(['data' => '系统设置已被其他管理员修改，请刷新页面后重试。']);
+            throw ValidationException::withMessages(['data' => __('moonweft-preference::system.errors.stale')]);
         }
     }
 

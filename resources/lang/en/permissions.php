@@ -5,7 +5,7 @@ return [
     'system' => [
         'group' => 'System settings',
         'label' => 'Manage system settings',
-        'description' => 'Manage the platform time zone and date and time formats.',
+        'description' => 'Manage the platform theme, colours, time zone and date and time formats.',
     ],
     'ai' => [
         'group' => 'Artificial intelligence',

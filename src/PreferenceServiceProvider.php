@@ -38,6 +38,7 @@ class PreferenceServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'moonweft-preference');
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'moonweft-preference');
         $this->loadMigrationsFrom(__DIR__.'/../database/settings');
 
         FilamentTimezone::set(static fn (): string => app(SystemSettings::class)->timezone);
