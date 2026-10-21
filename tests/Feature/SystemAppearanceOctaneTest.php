@@ -10,6 +10,7 @@ use Filament\Support\Facades\FilamentColor;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Vite;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Octane\ApplicationFactory;
@@ -26,6 +27,7 @@ use MoonWeft\Iam\Models\Admin;
 use MoonWeft\Iam\PermissionSynchronizer;
 use Moonweft\Preference\Filament\Pages\SystemSettingsPage;
 use Moonweft\Preference\PreferencePermissionContributor;
+use Moonweft\Preference\System\Appearance;
 use Moonweft\Preference\System\SystemSettings;
 use PHPUnit\Framework\TestCase;
 use Spatie\Permission\Models\Role;
@@ -71,7 +73,7 @@ final class SystemAppearanceOctaneTest extends TestCase
                 }
                 $settings = app(SystemSettings::class);
                 if ($request->isMethod('POST')) {
-                    $settings->fill($request->only(['theme_mode', 'primary_color', 'gray_color']));
+                    $settings->fill($request->only(['theme_mode', 'primary_color', 'gray_color', 'panel_theme']));
                     if ($request->boolean('fail')) {
                         Filament::bootCurrentPanel();
                         FilamentColor::getColors();
@@ -88,27 +90,29 @@ final class SystemAppearanceOctaneTest extends TestCase
                     FilamentColor::getColor('primary'), FilamentColor::getColor('gray'),
                     $panel->hasDarkMode(), $panel->hasDarkModeForced(), $panel->hasThemeSwitcher(),
                     str_contains(FilamentView::renderHook(PanelsRenderHook::HEAD_START)->toHtml(), 'data-system-theme="'.$settings->theme_mode.'"'),
+                    str_contains($panel->getTheme()->getHtml()->toHtml(), app(Vite::class)->asset(Appearance::THEMES[$settings->panel_theme])),
+                    $panel->hasTopbar(),
                 ];
             });
 
-            foreach ([[0, 'dark', 'violet', 'stone'], [1, 'light', 'emerald', 'zinc'], [0, 'system', 'blue', 'slate']] as [$actor, $mode, $primary, $gray]) {
-                $request = Request::create('/octane-test/appearance', 'POST', ['theme_mode' => $mode, 'primary_color' => $primary, 'gray_color' => $gray], server: ['HTTP_ACCEPT' => 'application/json']);
+            foreach ([[0, 'dark', 'violet', 'stone', 'sharp'], [1, 'light', 'emerald', 'zinc', 'orbit'], [0, 'system', 'blue', 'slate', 'sharp']] as [$actor, $mode, $primary, $gray, $theme]) {
+                $request = Request::create('/octane-test/appearance', 'POST', ['theme_mode' => $mode, 'primary_color' => $primary, 'gray_color' => $gray, 'panel_theme' => $theme], server: ['HTTP_ACCEPT' => 'application/json']);
                 $request->attributes->set('test_actor', $actors[$actor]);
                 $worker->handle($request, new RequestContext);
                 self::assertSame(200, $response->getStatusCode(), $response->getContent());
 
                 $worker->handle(Request::create('/octane-test/appearance'), new RequestContext);
-                self::assertSame([null, false, $mode, Color::all()[$primary], Color::all()[$gray], $mode !== 'light', $mode === 'dark', false, true], json_decode($response->getContent(), true));
+                self::assertSame([null, false, $mode, Color::all()[$primary], Color::all()[$gray], $mode !== 'light', $mode === 'dark', false, true, true, $theme !== 'sharp'], json_decode($response->getContent(), true));
             }
 
             // Both missing authority and an exception must leave the shared appearance intact.
             foreach ([[null, false, 403], [$actors[1], true, 500]] as [$actor, $fail, $status]) {
-                $request = Request::create('/octane-test/appearance', 'POST', ['primary_color' => 'rose', 'fail' => $fail], server: ['HTTP_ACCEPT' => 'application/json']);
+                $request = Request::create('/octane-test/appearance', 'POST', ['primary_color' => 'rose', 'panel_theme' => 'orbit', 'fail' => $fail], server: ['HTTP_ACCEPT' => 'application/json']);
                 $request->attributes->set('test_actor', $actor);
                 $worker->handle($request, new RequestContext);
                 self::assertSame($status, $response->getStatusCode());
                 $worker->handle(Request::create('/octane-test/appearance'), new RequestContext);
-                self::assertSame([null, false, 'system', Color::Blue, Color::Slate, true, false, false, true], json_decode($response->getContent(), true));
+                self::assertSame([null, false, 'system', Color::Blue, Color::Slate, true, false, false, true, true, false], json_decode($response->getContent(), true));
             }
 
             $worker->handleTask(static function () use ($role): void {
@@ -126,10 +130,11 @@ final class SystemAppearanceOctaneTest extends TestCase
             $worker->application()->instance(ReportException::class, $reporter);
             self::assertInstanceOf(TaskExceptionResult::class, $worker->handleTask(static function (): void {
                 app(SystemSettings::class)->primary_color = 'rose';
+                app(SystemSettings::class)->panel_theme = 'orbit';
                 throw new \RuntimeException('Synthetic appearance task failure');
             }));
-            self::assertSame(['blue', false], $worker->handleTask(static fn (): array => [
-                app(SystemSettings::class)->primary_color, SystemSettingsPage::canAccess(),
+            self::assertSame(['blue', 'sharp', false], $worker->handleTask(static fn (): array => [
+                app(SystemSettings::class)->primary_color, app(SystemSettings::class)->panel_theme, SystemSettingsPage::canAccess(),
             ])->result);
         } finally {
             $worker->terminate();

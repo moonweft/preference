@@ -5,25 +5,10 @@ return [
     'navigation_label' => 'System',
     'navigation_group' => 'Preferences',
     'fields' => [
-        'theme_mode' => 'Theme',
-        'primary_color' => 'Primary colour',
-        'gray_color' => 'Neutral colour',
         'timezone' => 'System time zone',
         'date_format' => 'Date format',
         'time_format' => 'Time format',
     ],
-    'appearance' => [
-        'title' => 'Theme and colours',
-        'description' => 'Shared across the admin panel and its login page for all users and organisations. System mode follows each device’s appearance. Saving reloads this page; other open pages apply changes when refreshed.',
-        'primary_help' => 'Buttons, links and selected items use this colour. Status colours keep their existing meaning.',
-        'gray_help' => 'Controls the neutral tones of backgrounds, borders and text.',
-    ],
-    'theme_modes' => ['system' => 'System', 'light' => 'Light', 'dark' => 'Dark'],
-    'primary_colors' => [
-        'blue' => 'Blue', 'indigo' => 'Indigo', 'violet' => 'Violet', 'purple' => 'Purple', 'rose' => 'Rose',
-        'orange' => 'Orange', 'amber' => 'Amber', 'emerald' => 'Emerald', 'teal' => 'Teal', 'cyan' => 'Cyan',
-    ],
-    'gray_colors' => ['slate' => 'Slate', 'gray' => 'Gray', 'zinc' => 'Zinc', 'neutral' => 'Neutral', 'stone' => 'Stone'],
     'datetime' => [
         'title' => 'Date and time',
         'description' => 'Default date and time displays and inputs share these settings across all users and organisations.',

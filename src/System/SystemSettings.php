@@ -36,7 +36,7 @@ final class SystemSettings extends Settings
 
     public const THEME_MODES = ['system', 'light', 'dark'];
 
-    public const PRIMARY_COLORS = ['blue', 'indigo', 'violet', 'purple', 'rose', 'orange', 'amber', 'emerald', 'teal', 'cyan'];
+    public const PRIMARY_COLORS = ['blue', 'indigo', 'violet', 'purple', 'rose', 'orange', 'amber', 'emerald', 'teal', 'cyan', 'lime', 'fuchsia'];
 
     public const GRAY_COLORS = ['slate', 'gray', 'zinc', 'neutral', 'stone'];
 
@@ -51,6 +51,8 @@ final class SystemSettings extends Settings
     public string $primary_color = 'blue';
 
     public string $gray_color = 'slate';
+
+    public string $panel_theme = 'sharp';
 
     public static function group(): string
     {
@@ -99,7 +101,8 @@ final class SystemSettings extends Settings
             'theme_mode' => ['required', Rule::in(self::THEME_MODES)],
             'primary_color' => ['required', Rule::in(self::PRIMARY_COLORS)],
             'gray_color' => ['required', Rule::in(self::GRAY_COLORS)],
-        ], attributes: __('moonweft-preference::system.fields'))->validate();
+            'panel_theme' => ['required', Rule::in(array_keys(Appearance::THEMES))],
+        ], attributes: [...__('moonweft-preference::system.fields'), ...__('moonweft-preference::theme.fields')])->validate();
 
         return DB::transaction(function () use ($principal, $values): self {
             $before = $this->originalValues?->all();

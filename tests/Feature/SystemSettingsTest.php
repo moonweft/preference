@@ -26,7 +26,9 @@ use MoonWeft\Iam\Models\User;
 use MoonWeft\Iam\PermissionSynchronizer;
 use Moonweft\Preference\Filament\Pages\AiSettingsPage;
 use Moonweft\Preference\Filament\Pages\SystemSettingsPage;
+use Moonweft\Preference\Filament\Pages\ThemeSettingsPage;
 use Moonweft\Preference\PreferencePermissionContributor;
+use Moonweft\Preference\System\Appearance;
 use Moonweft\Preference\System\SystemSettings;
 use Spatie\Permission\Models\Role;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -55,7 +57,7 @@ final class SystemSettingsTest extends TestCase
 
         $this->assertSame([
             'timezone' => 'Asia/Shanghai', 'date_format' => 'd/m/Y', 'time_format' => 'h:i A',
-            'theme_mode' => 'system', 'primary_color' => 'blue', 'gray_color' => 'slate',
+            'theme_mode' => 'system', 'primary_color' => 'blue', 'gray_color' => 'slate', 'panel_theme' => 'sharp',
         ], (new SystemSettings)->toArray());
     }
 
@@ -76,13 +78,13 @@ final class SystemSettingsTest extends TestCase
         $admin = Admin::factory()->create();
         $this->grant($admin);
 
-        Livewire::actingAs($admin, 'admin')->test(SystemSettingsPage::class)
-            ->fillForm(['theme_mode' => 'dark', 'primary_color' => 'violet', 'gray_color' => 'stone'])
-            ->call('save')->assertHasNoFormErrors()->assertRedirect(SystemSettingsPage::getUrl());
+        Livewire::actingAs($admin, 'admin')->test(ThemeSettingsPage::class)
+            ->fillForm(['panel_theme' => 'orbit', 'theme_mode' => 'dark', 'color_scheme' => 'violet'])
+            ->call('save')->assertHasNoFormErrors()->assertRedirect(ThemeSettingsPage::getUrl());
 
         $settings = new SystemSettings;
-        $this->assertSame(['dark', 'violet', 'stone', 'UTC'], [
-            $settings->theme_mode, $settings->primary_color, $settings->gray_color, $settings->timezone,
+        $this->assertSame(['orbit', 'dark', 'violet', 'slate', 'UTC'], [
+            $settings->panel_theme, $settings->theme_mode, $settings->primary_color, $settings->gray_color, $settings->timezone,
         ]);
     }
 
@@ -95,12 +97,13 @@ final class SystemSettingsTest extends TestCase
         $settings->theme_mode = 'invalid';
         $settings->primary_color = '</style><script>alert(1)</script>';
         $settings->gray_color = 'blue';
+        $settings->panel_theme = '../unknown.css';
 
         try {
             $settings->save();
             $this->fail('Invalid appearance was saved.');
         } catch (ValidationException $exception) {
-            $this->assertSame(['theme_mode', 'primary_color', 'gray_color'], array_keys($exception->errors()));
+            $this->assertSame(['theme_mode', 'primary_color', 'gray_color', 'panel_theme'], array_keys($exception->errors()));
         }
     }
 
@@ -124,14 +127,64 @@ final class SystemSettingsTest extends TestCase
     {
         $admin = Admin::factory()->create();
         $this->grant($admin);
-        foreach (['en' => ['System settings', 'System', 'Preferences', 'Theme and colours'],
-            'zh_CN' => ['系统设置', '系统', '偏好配置', '主题与配色']] as $locale => $labels) {
+        foreach (['en' => ['System settings', 'System', 'Preferences', 'Date and time'],
+            'zh_CN' => ['系统设置', '系统', '偏好配置', '日期与时间']] as $locale => $labels) {
             app()->setLocale($locale);
             $page = Livewire::actingAs($admin, 'admin')->test(SystemSettingsPage::class)->assertSee($labels[3]);
             $this->assertSame(array_slice($labels, 0, 3), [
                 $page->instance()->getTitle(), SystemSettingsPage::getNavigationLabel(), SystemSettingsPage::getNavigationGroup(),
             ]);
         }
+    }
+
+    public function test_theme_navigation_shows_theme_cards_and_twelve_colour_schemes_without_selects(): void
+    {
+        $admin = Admin::factory()->create();
+        $this->grant($admin);
+        $page = Livewire::actingAs($admin, 'admin')->test(ThemeSettingsPage::class)
+            ->assertSee('Sharp')->assertSee('Orbit')->assertDontSee('<select', false);
+        foreach (array_keys(Appearance::COLOR_SCHEMES) as $key) {
+            $page->assertSee('data-appearance-option="palette:'.$key.'"', false);
+        }
+        Livewire::test(SystemSettingsPage::class)->assertDontSee('data-appearance-option', false);
+        foreach (['en' => 'Theme', 'zh_CN' => '主题'] as $locale => $label) {
+            app()->setLocale($locale);
+            $this->assertSame($label, ThemeSettingsPage::getNavigationLabel());
+        }
+    }
+
+    public function test_theme_page_preserves_existing_colour_pairings_until_a_scheme_is_selected(): void
+    {
+        $admin = Admin::factory()->create();
+        $this->grant($admin);
+        $this->actingAs($admin, 'admin');
+        $settings = app(SystemSettings::class);
+        $settings->primary_color = 'violet';
+        $settings->gray_color = 'stone';
+        $settings->save();
+        Livewire::test(ThemeSettingsPage::class)->assertSet('data.color_scheme', 'current')
+            ->fillForm(['panel_theme' => 'orbit'])->call('save')->assertHasNoFormErrors();
+        Livewire::test(SystemSettingsPage::class)->fillForm(['timezone' => 'Asia/Shanghai'])
+            ->call('save')->assertHasNoFormErrors();
+        $saved = new SystemSettings;
+        $this->assertSame(['orbit', 'violet', 'stone', 'Asia/Shanghai'], [
+            $saved->panel_theme, $saved->primary_color, $saved->gray_color, $saved->timezone,
+        ]);
+    }
+
+    public function test_theme_page_rejects_stale_edits_invalid_schemes_and_revoked_permission(): void
+    {
+        $admin = Admin::factory()->create();
+        $role = $this->grant($admin);
+        $page = Livewire::actingAs($admin, 'admin')->test(ThemeSettingsPage::class);
+        $page->fillForm(['color_scheme' => 'unknown'])->call('save')->assertHasFormErrors(['color_scheme']);
+        $settings = new SystemSettings;
+        $settings->timezone = 'Europe/London';
+        $settings->save();
+        $page->fillForm(['color_scheme' => 'emerald'])->call('save')->assertHasErrors(['data']);
+        $role->revokePermissionTo(PreferencePermissionContributor::MANAGE_SYSTEM);
+        $page->call('save')->assertForbidden();
+        $this->assertSame('blue', (new SystemSettings)->primary_color);
     }
 
     public function test_switching_administrators_invalidates_the_editing_session(): void

@@ -16,7 +16,7 @@ use Moonweft\Preference\SettingsAccess;
 use Moonweft\Preference\System\SystemSettings;
 use Spatie\LaravelSettings\SettingsRepositories\DatabaseSettingsRepository;
 
-final class SystemSettingsPage extends SettingsPage
+class SystemSettingsPage extends SettingsPage
 {
     protected static string $settings = SystemSettings::class;
 
@@ -51,7 +51,7 @@ final class SystemSettingsPage extends SettingsPage
 
     public function getRedirectUrl(): ?string
     {
-        return self::getUrl();
+        return static::getUrl();
     }
 
     public static function canAccess(): bool

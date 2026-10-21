@@ -6,10 +6,14 @@ namespace Moonweft\Preference\Filament;
 
 use Filament\Contracts\Plugin;
 use Filament\Panel;
+use Filament\Support\Assets\Theme;
 use Filament\View\PanelsRenderHook;
+use Illuminate\Foundation\Vite;
 use Moonweft\Preference\Filament\Pages\AiSettingsPage;
 use Moonweft\Preference\Filament\Pages\SmsSettingsPage;
 use Moonweft\Preference\Filament\Pages\SystemSettingsPage;
+use Moonweft\Preference\Filament\Pages\ThemeSettingsPage;
+use Moonweft\Preference\System\Appearance;
 use Moonweft\Preference\System\SystemSettings;
 
 final class PreferencePlugin implements Plugin
@@ -26,7 +30,11 @@ final class PreferencePlugin implements Plugin
 
     public function register(Panel $panel): void
     {
-        $panel->pages([SystemSettingsPage::class, AiSettingsPage::class, SmsSettingsPage::class])
+        $panel->pages([SystemSettingsPage::class, ThemeSettingsPage::class, AiSettingsPage::class, SmsSettingsPage::class])
+            ->theme(Theme::make('system-appearance')->html(static fn () => app(Vite::class)(
+                Appearance::THEMES[app(SystemSettings::class)->panel_theme],
+            )))
+            ->topbar(static fn (): bool => app(SystemSettings::class)->panel_theme !== 'sharp')
             ->colors(static fn (): array => app(SystemSettings::class)->colors())
             ->darkMode(
                 static fn (): bool => app(SystemSettings::class)->theme_mode !== 'light',

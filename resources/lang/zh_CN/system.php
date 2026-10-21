@@ -5,25 +5,10 @@ return [
     'navigation_label' => '系统',
     'navigation_group' => '偏好配置',
     'fields' => [
-        'theme_mode' => '主题',
-        'primary_color' => '主色',
-        'gray_color' => '中性色',
         'timezone' => '系统时区',
         'date_format' => '日期格式',
         'time_format' => '时间格式',
     ],
-    'appearance' => [
-        'title' => '主题与配色',
-        'description' => '统一应用于后台及其登录页，所有用户与组织共用。「跟随系统」使用各设备的外观偏好。保存后当前页面自动重新加载，其他已打开的页面刷新后生效。',
-        'primary_help' => '用于按钮、链接和选中状态。成功、警告、错误等状态颜色保持原有含义。',
-        'gray_help' => '用于背景、边框和正文的灰色系。',
-    ],
-    'theme_modes' => ['system' => '跟随系统', 'light' => '浅色', 'dark' => '深色'],
-    'primary_colors' => [
-        'blue' => '蓝色', 'indigo' => '靛蓝', 'violet' => '紫罗兰', 'purple' => '紫色', 'rose' => '玫红',
-        'orange' => '橙色', 'amber' => '琥珀', 'emerald' => '翠绿', 'teal' => '蓝绿', 'cyan' => '青色',
-    ],
-    'gray_colors' => ['slate' => '蓝灰', 'gray' => '冷灰', 'zinc' => '锌灰', 'neutral' => '中性灰', 'stone' => '暖灰'],
     'datetime' => [
         'title' => '日期与时间',
         'description' => '对整个系统的默认时间显示和日期时间输入生效，所有用户与组织共用。',
