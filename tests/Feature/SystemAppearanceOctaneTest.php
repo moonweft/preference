@@ -95,7 +95,7 @@ final class SystemAppearanceOctaneTest extends TestCase
                 ];
             });
 
-            foreach ([[0, 'violet', 'stone', 'sharp'], [1, 'emerald', 'zinc', 'orbit'], [0, 'blue', 'slate', 'sharp']] as [$actor, $primary, $gray, $theme]) {
+            foreach ([[0, 'mauve', 'stone', 'sharp'], [1, 'olive', 'zinc', 'orbit'], [0, 'blue', 'slate', 'sharp']] as [$actor, $primary, $gray, $theme]) {
                 $request = Request::create('/octane-test/appearance', 'POST', ['primary_color' => $primary, 'gray_color' => $gray, 'panel_theme' => $theme], server: ['HTTP_ACCEPT' => 'application/json']);
                 $request->attributes->set('test_actor', $actors[$actor]);
                 $worker->handle($request, new RequestContext);

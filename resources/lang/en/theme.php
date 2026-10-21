@@ -13,6 +13,8 @@ return [
         'blue' => 'Ocean blue', 'indigo' => 'Midnight indigo', 'violet' => 'Iris violet', 'purple' => 'Amethyst',
         'rose' => 'Rose garden', 'orange' => 'Sunset orange', 'amber' => 'Golden amber', 'emerald' => 'Forest emerald',
         'teal' => 'Lagoon teal', 'cyan' => 'Glacier cyan', 'lime' => 'Spring lime', 'fuchsia' => 'Orchid',
+        'red' => 'Coral red', 'yellow' => 'Sunshine yellow', 'green' => 'Meadow green', 'sky' => 'Clear sky',
+        'pink' => 'Cherry blossom', 'mauve' => 'Dusty mauve', 'olive' => 'Olive grove', 'taupe' => 'Warm taupe',
         'current' => 'Current colours',
     ],
 ];

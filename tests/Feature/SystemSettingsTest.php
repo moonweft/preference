@@ -78,14 +78,17 @@ final class SystemSettingsTest extends TestCase
         $admin = Admin::factory()->create();
         $this->grant($admin);
 
-        Livewire::actingAs($admin, 'admin')->test(ThemeSettingsPage::class)
-            ->fillForm(['panel_theme' => 'orbit', 'color_scheme' => 'violet'])
-            ->call('save')->assertHasNoFormErrors()->assertRedirect(ThemeSettingsPage::getUrl());
+        foreach (Appearance::COLOR_SCHEMES as $scheme => $colors) {
+            Livewire::actingAs($admin, 'admin')->test(ThemeSettingsPage::class)
+                ->fillForm(['panel_theme' => 'orbit', 'color_scheme' => $scheme])
+                ->call('save')->assertHasNoFormErrors()->assertRedirect(ThemeSettingsPage::getUrl());
 
-        $settings = new SystemSettings;
-        $this->assertSame(['orbit', 'violet', 'slate', 'UTC'], [
-            $settings->panel_theme, $settings->primary_color, $settings->gray_color, $settings->timezone,
-        ]);
+            $settings = new SystemSettings;
+            $this->assertSame(['orbit', $colors['primary_color'], $colors['gray_color'], 'UTC', Color::all()[$colors['primary_color']]], [
+                $settings->panel_theme, $settings->primary_color, $settings->gray_color, $settings->timezone, $settings->colors()['primary'],
+            ]);
+            Livewire::test(ThemeSettingsPage::class)->assertSet('data.color_scheme', $scheme);
+        }
     }
 
     public function test_backend_rejects_invalid_theme_and_colour_values(): void
@@ -136,20 +139,23 @@ final class SystemSettingsTest extends TestCase
         }
     }
 
-    public function test_theme_navigation_shows_theme_cards_and_twelve_colour_schemes_without_selects(): void
+    public function test_theme_navigation_shows_theme_cards_and_twenty_colour_schemes_without_selects(): void
     {
+        $this->assertCount(20, Appearance::COLOR_SCHEMES);
         $admin = Admin::factory()->create();
         $this->grant($admin);
-        $page = Livewire::actingAs($admin, 'admin')->test(ThemeSettingsPage::class)
-            ->assertSee('Sharp')->assertSee('Orbit')->assertDontSee('<select', false);
-        foreach (array_keys(Appearance::COLOR_SCHEMES) as $key) {
-            $page->assertSee('data-appearance-option="palette:'.$key.'"', false);
-        }
-        Livewire::test(SystemSettingsPage::class)->assertDontSee('data-appearance-option', false);
         foreach (['en' => 'Theme', 'zh_CN' => '主题'] as $locale => $label) {
             app()->setLocale($locale);
             $this->assertSame($label, ThemeSettingsPage::getNavigationLabel());
+            $page = Livewire::actingAs($admin, 'admin')->test(ThemeSettingsPage::class)
+                ->assertSee('Sharp')->assertSee('Orbit')->assertDontSee('<select', false);
+            $labels = __('moonweft-preference::theme.schemes');
+            foreach (array_keys(Appearance::COLOR_SCHEMES) as $key) {
+                $this->assertArrayHasKey($key, $labels);
+                $page->assertSee('data-appearance-option="palette:'.$key.'"', false)->assertSee($labels[$key]);
+            }
         }
+        Livewire::test(SystemSettingsPage::class)->assertDontSee('data-appearance-option', false);
     }
 
     public function test_theme_page_uses_the_native_personal_mode_switcher(): void

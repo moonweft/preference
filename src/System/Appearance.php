@@ -25,6 +25,14 @@ final class Appearance
         'cyan' => ['primary_color' => 'cyan', 'gray_color' => 'gray'],
         'lime' => ['primary_color' => 'lime', 'gray_color' => 'neutral'],
         'fuchsia' => ['primary_color' => 'fuchsia', 'gray_color' => 'zinc'],
+        'red' => ['primary_color' => 'red', 'gray_color' => 'neutral'],
+        'yellow' => ['primary_color' => 'yellow', 'gray_color' => 'stone'],
+        'green' => ['primary_color' => 'green', 'gray_color' => 'neutral'],
+        'sky' => ['primary_color' => 'sky', 'gray_color' => 'slate'],
+        'pink' => ['primary_color' => 'pink', 'gray_color' => 'zinc'],
+        'mauve' => ['primary_color' => 'mauve', 'gray_color' => 'zinc'],
+        'olive' => ['primary_color' => 'olive', 'gray_color' => 'stone'],
+        'taupe' => ['primary_color' => 'taupe', 'gray_color' => 'stone'],
     ];
 
     /** Resolve a saved combination without silently changing an existing custom pairing. */

@@ -13,6 +13,8 @@ return [
         'blue' => '海洋蓝', 'indigo' => '午夜靛蓝', 'violet' => '鸢尾紫', 'purple' => '紫水晶',
         'rose' => '玫瑰红', 'orange' => '日落橙', 'amber' => '琥珀金', 'emerald' => '森林绿',
         'teal' => '湖水青', 'cyan' => '冰川蓝', 'lime' => '春芽绿', 'fuchsia' => '兰花紫',
+        'red' => '珊瑚红', 'yellow' => '日光黄', 'green' => '草原绿', 'sky' => '晴空蓝',
+        'pink' => '樱花粉', 'mauve' => '烟霞紫', 'olive' => '橄榄绿', 'taupe' => '暖砂褐',
         'current' => '当前配色',
     ],
 ];

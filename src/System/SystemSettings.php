@@ -34,7 +34,10 @@ final class SystemSettings extends Settings
         'h:i A' => '02:30 PM',
     ];
 
-    public const PRIMARY_COLORS = ['blue', 'indigo', 'violet', 'purple', 'rose', 'orange', 'amber', 'emerald', 'teal', 'cyan', 'lime', 'fuchsia'];
+    public const PRIMARY_COLORS = [
+        'blue', 'indigo', 'violet', 'purple', 'rose', 'orange', 'amber', 'emerald', 'teal', 'cyan', 'lime', 'fuchsia',
+        'red', 'yellow', 'green', 'sky', 'pink', 'mauve', 'olive', 'taupe',
+    ];
 
     public const GRAY_COLORS = ['slate', 'gray', 'zinc', 'neutral', 'stone'];
 
