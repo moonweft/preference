@@ -12,3 +12,4 @@
 .mw-sms-provider-options .fi-btn:hover { border-color: var(--primary-400); }
 .mw-sms-provider-options .fi-btn[aria-pressed='true'] { border-color: var(--primary-600); box-shadow: 0 0 0 1px var(--primary-600); }
 .mw-sms-provider-options .fi-btn:focus-visible { outline: 3px solid var(--primary-300); outline-offset: 3px; }
+.mw-sms-provider-options .fi-icon { width: 1.5rem; height: 1.5rem; flex-shrink: 0; }

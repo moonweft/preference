@@ -19,6 +19,12 @@ final class SmsSettingsForm
     public static function configure(Schema $schema): Schema
     {
         $tabs = [];
+        $icons = [
+            'aliyun' => view('mw-components::icons.providers.aliyun'),
+            'qcloud' => view('mw-components::icons.providers.tencent'),
+            'qiniu' => view('mw-components::icons.providers.qiniu'),
+            'yunpian' => view('mw-components::icons.providers.yunpian'),
+        ];
 
         foreach (SmsSettings::GATEWAYS as $gateway => $definition) {
             $fields = [Text::make(__('moonweft-preference::sms.help.provider'))->columnSpanFull()];
@@ -33,7 +39,7 @@ final class SmsSettingsForm
             }
             $fields[] = Toggle::make("providers.{$gateway}.remove_credentials")->label(__('moonweft-preference::sms.fields.remove_credentials'))
                 ->helperText(__('moonweft-preference::sms.help.remove_credentials'));
-            $tabs[] = Tab::make(__($definition['label']))->schema($fields)->columns(2);
+            $tabs[] = Tab::make(__($definition['label']))->icon($icons[$gateway])->schema($fields)->columns(2);
         }
 
         return $schema->components([
@@ -41,10 +47,12 @@ final class SmsSettingsForm
                 ->schema([
                     Toggle::make('enabled')->label(__('moonweft-preference::sms.fields.enabled')),
                     ToggleButtons::make('default_gateway')->label(__('moonweft-preference::sms.fields.default_gateway'))
+                        ->icons($icons)
                         ->options(array_map(static fn (array $gateway): string => __($gateway['label']), SmsSettings::GATEWAYS))
                         ->inline()->required()->extraAttributes(['class' => 'mw-sms-provider-options'])
                         ->helperText(__('moonweft-preference::sms.help.default_gateway')),
                     ToggleButtons::make('backup_gateway')->label(__('moonweft-preference::sms.fields.backup_gateway'))
+                        ->icons($icons)
                         ->options(array_map(static fn (array $gateway): string => __($gateway['label']), SmsSettings::GATEWAYS))
                         ->inline()->different('default_gateway')->extraAttributes(['class' => 'mw-sms-provider-options'])
                         ->helperText(__('moonweft-preference::sms.help.backup_gateway')),
