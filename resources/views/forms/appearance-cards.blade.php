@@ -14,7 +14,7 @@
             @endphp
             <label class="mw-appearance-option" data-appearance-option="{{ $kind }}:{{ $value }}"
                 style="--preview-primary: {{ $primary[600] }}; --preview-soft: {{ $primary[100] }}; --preview-background: {{ $gray[50] }}; --preview-border: {{ $gray[200] }}; --preview-ink: {{ $gray[800] }}; --preview-muted: {{ $gray[400] }}">
-                <input type="radio" class="fi-radio-input" name="{{ $getId() }}" id="{{ $getId() }}-{{ $value }}"
+                <input type="radio" name="{{ $getId() }}" id="{{ $getId() }}-{{ $value }}"
                     value="{{ $value }}" {{ $applyStateBindingModifiers('wire:model') }}="{{ $getStatePath() }}"
                     @disabled($isDisabled()) @required($isRequired()) />
                 <span class="mw-appearance-preview {{ $kind === 'theme' ? 'mw-preview-'.$value : '' }}" aria-hidden="true">

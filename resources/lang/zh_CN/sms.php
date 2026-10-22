@@ -4,7 +4,6 @@ return [
     'title' => '短信配置',
     'navigation_label' => '短信',
     'navigation_group' => '偏好配置',
-    'tabs' => ['general' => '默认配置'],
     'sections' => [
         'service' => '系统短信服务',
         'service_description' => '整个系统共用，默认关闭。启用前请填写主服务商的凭据；保存配置不会发送短信，也不代表服务商已验证通过。',
@@ -35,12 +34,36 @@ return [
         'qiniu' => '七牛云',
         'yunpian' => '云片',
     ],
-    'no_backup' => '不使用备用服务商',
     'seconds' => '秒',
     'help' => [
+        'default_gateway' => '点击选择优先使用的服务商，并在下方对应 Tab 填写凭据后统一保存。切换配置 Tab 不会改变主服务商。',
+        'backup_gateway' => '选填，必须与主服务商不同。再次点击已选项可取消备用；启用自动切换前须选择备用服务商，启用短信时还须补齐其凭据。',
+        'timeout' => '填写 1–60 秒，表示每次调用服务商接口的等待上限，不代表短信送达时间。请求超时后不会自动改用备用服务商，避免重复发送。',
+        'provider' => '在这里配置服务商的凭据和签名，主备选择仍以上方设置为准。启用短信时，主服务商和已启用自动切换的备用服务商须补齐必填项。保存只校验配置，不测试真实发送。',
         'failover' => '主服务商因已识别的余额或鉴权问题拒绝发送时，尝试备用一次；超时、结果未知或已受理时不切换。',
         'credentials' => '已保存的凭据不会回显，留空保留原值。',
         'remove_credentials' => '启用中的主、备用服务商不能移除必填凭据，请先关闭对应发送通道。',
+    ],
+    'provider_fields' => [
+        'aliyun' => [
+            'access_key_id' => '填写具备短信发送权限的阿里云访问密钥 ID，与下方 Access Key Secret 配对使用。',
+            'access_key_secret' => '填写对应 Access Key ID 的密钥 Secret，不是登录密码。',
+            'sign_name' => '填写已审核通过的短信签名名称，例如「MoonWeft」，须与发送模板所属账号一致。此处不填写模板 ID 或完整短信内容。',
+        ],
+        'qcloud' => [
+            'sdk_app_id' => '填写腾讯云短信应用的 SDK App ID，例如 1400000001；不是账号 ID 或模板 ID。',
+            'secret_id' => '填写具备短信发送权限的腾讯云 API 密钥 Secret ID，与下方 Secret Key 配对使用。',
+            'secret_key' => '填写对应 Secret ID 的 Secret Key，不是短信应用 ID。',
+            'sign_name' => '填写该短信应用下已审核通过的签名名称，例如「MoonWeft」。模板 ID 与变量由发送短信的业务模块提供。',
+        ],
+        'qiniu' => [
+            'access_key' => '填写开通七牛云短信服务的账号 Access Key，与下方 Secret Key 配对使用。',
+            'secret_key' => '填写对应 Access Key 的 Secret Key。短信模板 ID 和变量由业务模块在发送时提供。',
+        ],
+        'yunpian' => [
+            'api_key' => '填写云片账号的 API Key，用于鉴权，不是登录密码或短信模板 ID。',
+            'signature' => '选填，填写已审核的完整签名，例如【MoonWeft】；内容未以【开头时会加在正文前。留空时，请确保业务模块提供的内容已包含审核通过的签名。',
+        ],
     ],
     'errors' => [
         'unavailable' => '短信配置暂时无法读取',

@@ -4,7 +4,6 @@ return [
     'title' => 'SMS settings',
     'navigation_label' => 'SMS',
     'navigation_group' => 'Preferences',
-    'tabs' => ['general' => 'General'],
     'sections' => [
         'service' => 'System SMS service',
         'service_description' => 'Shared across the system and disabled by default. Configure the primary provider before enabling SMS. Saving settings does not send a message or verify the provider credentials.',
@@ -35,12 +34,36 @@ return [
         'qiniu' => 'Qiniu Cloud',
         'yunpian' => 'Yunpian',
     ],
-    'no_backup' => 'No backup provider',
     'seconds' => 'seconds',
     'help' => [
+        'default_gateway' => 'Click the preferred provider, enter its credentials on the corresponding tab below and save together. Switching configuration tabs does not change the primary provider.',
+        'backup_gateway' => 'Optional and must differ from the primary provider. Click the selected option again to clear it. Choose a backup before enabling failover and complete its credentials before enabling SMS.',
+        'timeout' => 'Enter 1–60 seconds for each provider API request. This is not the SMS delivery time. A timeout does not trigger failover, to avoid duplicate messages.',
+        'provider' => 'Configure provider credentials and signatures here. Primary and backup choices remain in the settings above. When SMS is enabled, complete required fields for the primary and any active failover provider. Saving validates configuration without sending a real message.',
         'failover' => 'Try the backup once after a recognised balance or authentication rejection. Do not switch after a timeout, an unknown outcome or acceptance by the primary provider.',
         'credentials' => 'Saved credentials are hidden. Leave blank to keep the current value.',
         'remove_credentials' => 'Required credentials cannot be removed from an active primary or backup provider. Disable the corresponding sending route first.',
+    ],
+    'provider_fields' => [
+        'aliyun' => [
+            'access_key_id' => 'Enter an Alibaba Cloud Access Key ID with SMS sending permission, paired with the Access Key Secret below.',
+            'access_key_secret' => 'Enter the secret for the corresponding Access Key ID, not your login password.',
+            'sign_name' => 'Enter an approved SMS signature name, such as MoonWeft, from the account that owns the sending template. Do not enter a template ID or full message here.',
+        ],
+        'qcloud' => [
+            'sdk_app_id' => 'Enter the Tencent Cloud SMS application SDK App ID, for example 1400000001. This is not an account ID or template ID.',
+            'secret_id' => 'Enter a Tencent Cloud API Secret ID with SMS sending permission, paired with the Secret Key below.',
+            'secret_key' => 'Enter the Secret Key for the corresponding Secret ID, not the SMS application ID.',
+            'sign_name' => 'Enter an approved signature name for this SMS application, such as MoonWeft. The sending business module supplies template IDs and variables.',
+        ],
+        'qiniu' => [
+            'access_key' => 'Enter the Access Key for an account with Qiniu SMS enabled, paired with the Secret Key below.',
+            'secret_key' => 'Enter the Secret Key for the corresponding Access Key. Business modules supply template IDs and variables when sending.',
+        ],
+        'yunpian' => [
+            'api_key' => 'Enter the Yunpian account API Key for authentication, not a login password or SMS template ID.',
+            'signature' => 'Optional. Enter the full approved signature, for example 【MoonWeft】. It is prepended when content does not start with 【. If blank, ensure the business module supplies content with an approved signature.',
+        ],
     ],
     'errors' => [
         'unavailable' => 'SMS settings are temporarily unavailable',
