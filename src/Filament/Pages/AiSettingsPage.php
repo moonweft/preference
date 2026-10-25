@@ -26,17 +26,12 @@ use Moonweft\Preference\PreferencePermissionContributor;
 use Moonweft\Preference\SettingsAccess;
 use Spatie\LaravelSettings\SettingsRepositories\DatabaseSettingsRepository;
 use Spatie\LaravelSettings\Support\Crypto;
-use UnitEnum;
 
 final class AiSettingsPage extends SettingsPage
 {
     protected static string $settings = AiSettings::class;
 
-    protected static ?string $title = 'AI 配置';
-
     protected static ?string $navigationLabel = 'AI';
-
-    protected static string|UnitEnum|null $navigationGroup = '偏好配置';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSparkles;
 
@@ -54,6 +49,16 @@ final class AiSettingsPage extends SettingsPage
 
     #[Locked]
     public bool $configurationUnavailable = false;
+
+    public function getTitle(): string
+    {
+        return __('moonweft-preference::ai.title');
+    }
+
+    public static function getNavigationGroup(): string
+    {
+        return __('moonweft-preference::system.navigation_group');
+    }
 
     public static function canAccess(): bool
     {
