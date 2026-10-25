@@ -219,7 +219,7 @@ final class SmsSettingsTest extends TestCase
                 ->assertHasFormErrors(['providers.aliyun.sign_name']);
             self::assertSame($english ? 'SMS settings' : '短信配置', $page->instance()->getTitle());
             self::assertSame($english ? 'SMS' : '短信', SmsSettingsPage::getNavigationLabel());
-            self::assertSame($english ? 'Preferences' : '偏好配置', SmsSettingsPage::getNavigationGroup());
+            self::assertSame('preferences', SmsSettingsPage::getNavigationGroup());
             self::assertStringContainsString($english ? 'Alibaba Cloud SMS signature' : '阿里云 短信签名', $page->instance()->getErrorBag()->first('data.providers.aliyun.sign_name'));
             $settings = new SmsSettings;
             $settings->timeout += 1;

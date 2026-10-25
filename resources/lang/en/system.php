@@ -3,7 +3,6 @@
 return [
     'title' => 'System settings',
     'navigation_label' => 'System',
-    'navigation_group' => 'Preferences',
     'fields' => [
         'timezone' => 'System time zone',
         'date_format' => 'Date format',

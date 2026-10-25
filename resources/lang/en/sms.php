@@ -3,7 +3,6 @@
 return [
     'title' => 'SMS settings',
     'navigation_label' => 'SMS',
-    'navigation_group' => 'Preferences',
     'sections' => [
         'service' => 'System SMS service',
         'service_description' => 'Shared across the system and disabled by default. Configure the primary provider before enabling SMS. Saving settings does not send a message or verify the provider credentials.',

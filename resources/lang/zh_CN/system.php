@@ -3,7 +3,6 @@
 return [
     'title' => '系统设置',
     'navigation_label' => '系统',
-    'navigation_group' => '偏好配置',
     'fields' => [
         'timezone' => '系统时区',
         'date_format' => '日期格式',

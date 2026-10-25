@@ -129,8 +129,8 @@ final class SystemSettingsTest extends TestCase
     {
         $admin = Admin::factory()->create();
         $this->grant($admin);
-        foreach (['en' => ['System settings', 'System', 'Preferences', 'Date and time'],
-            'zh_CN' => ['系统设置', '系统', '偏好配置', '日期与时间']] as $locale => $labels) {
+        foreach (['en' => ['System settings', 'System', 'preferences', 'Date and time'],
+            'zh_CN' => ['系统设置', '系统', 'preferences', '日期与时间']] as $locale => $labels) {
             app()->setLocale($locale);
             $page = Livewire::actingAs($admin, 'admin')->test(SystemSettingsPage::class)->assertSee($labels[3]);
             $this->assertSame(array_slice($labels, 0, 3), [

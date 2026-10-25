@@ -2,8 +2,12 @@
 
 `moonweft/preference` 管理 host 级系统配置，包括统一后台主题、配色、日期时间显示和 Laravel AI SDK 配置。
 
-导航分组按当前请求语言解析，中文为「偏好配置」，英文为 `Preferences`。AI 入口与系统、
-主题和短信使用相同的分组翻译，避免英文环境拆成两个组；AI 页面标题位于 `resources/lang/{locale}/ai.php`。
+`PreferencePlugin` 统一维护固定标识 `preferences` 的导航分组，通过 Filament 原生
+`NavigationGroup::configureUsing()` 按当前请求语言解析名称，不改变已有分组顺序。
+名称只定义在本模块 `resources/lang/{locale}/navigation.php`：中文为「偏好配置」，英文为
+`Preferences`。系统、主题、AI、短信及其他模块的设置入口仅返回 `preferences`，不复制
+分组翻译，不需要反向依赖 Preference 的业务服务。Host 注册 `PreferencePlugin` 后统一生效。
+菜单、标题等模块自身文案仍归各模块；AI 页面标题位于 `resources/lang/{locale}/ai.php`。
 
 语音转文字使用 Laravel AI SDK 已支持的服务商，在 AI 配置中选择默认服务商并配置凭据。
 业务调用通过 `AiConfiguration::run()` 应用系统配置，继续使用原生 `Transcription` 接口。

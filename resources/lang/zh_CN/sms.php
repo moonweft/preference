@@ -3,7 +3,6 @@
 return [
     'title' => '短信配置',
     'navigation_label' => '短信',
-    'navigation_group' => '偏好配置',
     'sections' => [
         'service' => '系统短信服务',
         'service_description' => '整个系统共用，默认关闭。启用前请填写主服务商的凭据；保存配置不会发送短信，也不代表服务商已验证通过。',

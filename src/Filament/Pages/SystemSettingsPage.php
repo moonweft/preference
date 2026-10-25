@@ -46,7 +46,7 @@ class SystemSettingsPage extends SettingsPage
 
     public static function getNavigationGroup(): string
     {
-        return __('moonweft-preference::system.navigation_group');
+        return 'preferences';
     }
 
     public function getRedirectUrl(): ?string

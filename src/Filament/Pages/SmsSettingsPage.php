@@ -52,7 +52,7 @@ final class SmsSettingsPage extends SettingsPage
 
     public static function getNavigationGroup(): string
     {
-        return __('moonweft-preference::sms.navigation_group');
+        return 'preferences';
     }
 
     public static function canAccess(): bool
