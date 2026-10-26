@@ -96,7 +96,7 @@ final class AiSettings extends Settings
 
                 foreach (['url', $catalog->modelPath($name, $capability)] as $field) {
                     if (blank(Arr::get($effective, $field))) {
-                        $validator->errors()->add("providers.{$name}.{$field}", '作为默认服务商时，必须填写接口地址及对应模型。');
+                        $validator->errors()->add("providers.{$name}.{$field}", __('moonweft-preference::ai.errors.default_provider'));
                     }
                 }
             }

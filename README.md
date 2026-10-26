@@ -9,6 +9,11 @@
 分组翻译，不需要反向依赖 Preference 的业务服务。Host 注册 `PreferencePlugin` 后统一生效。
 菜单、标题等模块自身文案仍归各模块；AI 页面标题位于 `resources/lang/{locale}/ai.php`。
 
+AI 配置表单由 `Filament/Schemas/AiSettingsForm.php` 维护，复用 Components 的输入和选择组件。
+默认能力、服务商字段、使用限额、单位、说明、选项、密钥占位与配置错误统一使用本模块
+`resources/lang/{locale}/ai.php` 的中英文文案。服务商能力与模型路径仍由 `ProviderCatalog`
+维护，显示文案在每次请求时翻译；切换语言不改变服务商标识、配置键、凭据或限额。
+
 语音转文字使用 Laravel AI SDK 已支持的服务商，在 AI 配置中选择默认服务商并配置凭据。
 业务调用通过 `AiConfiguration::run()` 应用系统配置，继续使用原生 `Transcription` 接口。
 

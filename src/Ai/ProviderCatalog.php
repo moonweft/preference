@@ -15,12 +15,12 @@ use Laravel\Ai\Providers;
 final class ProviderCatalog
 {
     public const CAPABILITIES = [
-        'text' => ['label' => '文本生成', 'config' => 'default', 'contract' => TextProvider::class],
-        'image' => ['label' => '图像生成', 'config' => 'default_for_images', 'contract' => ImageProvider::class],
-        'audio' => ['label' => '语音合成', 'config' => 'default_for_audio', 'contract' => AudioProvider::class],
-        'transcription' => ['label' => '语音转文字', 'config' => 'default_for_transcription', 'contract' => TranscriptionProvider::class],
-        'embeddings' => ['label' => '向量嵌入', 'config' => 'default_for_embeddings', 'contract' => EmbeddingProvider::class],
-        'reranking' => ['label' => '搜索重排序', 'config' => 'default_for_reranking', 'contract' => RerankingProvider::class],
+        'text' => ['config' => 'default', 'contract' => TextProvider::class],
+        'image' => ['config' => 'default_for_images', 'contract' => ImageProvider::class],
+        'audio' => ['config' => 'default_for_audio', 'contract' => AudioProvider::class],
+        'transcription' => ['config' => 'default_for_transcription', 'contract' => TranscriptionProvider::class],
+        'embeddings' => ['config' => 'default_for_embeddings', 'contract' => EmbeddingProvider::class],
+        'reranking' => ['config' => 'default_for_reranking', 'contract' => RerankingProvider::class],
     ];
 
     private const DRIVERS = [
@@ -28,7 +28,7 @@ final class ProviderCatalog
         'anthropic' => ['Anthropic', Providers\AnthropicProvider::class],
         'gemini' => ['Gemini', Providers\GeminiProvider::class],
         'deepseek' => ['DeepSeek', Providers\DeepSeekProvider::class],
-        'openai-compatible' => ['OpenAI 兼容接口', Providers\OpenAiCompatibleProvider::class],
+        'openai-compatible' => ['moonweft-preference::ai.providers.openai_compatible', Providers\OpenAiCompatibleProvider::class],
         'ollama' => ['Ollama', Providers\OllamaProvider::class],
         'openrouter' => ['OpenRouter', Providers\OpenRouterProvider::class],
         'azure' => ['Azure OpenAI', Providers\AzureOpenAiProvider::class],
@@ -54,7 +54,7 @@ final class ProviderCatalog
                 continue;
             }
 
-            $options[$name] = self::DRIVERS[$driver][0].($name === $driver ? '' : " ({$name})");
+            $options[$name] = __(self::DRIVERS[$driver][0]).($name === $driver ? '' : " ({$name})");
         }
 
         return $options;
@@ -89,36 +89,39 @@ final class ProviderCatalog
     /** @return array<string, string> */
     public function fields(string $name): array
     {
-        $fields = ['key' => 'API 密钥'];
+        $fields = ['key' => __('moonweft-preference::ai.fields.key')];
 
         if ($this->driver($name) === 'bedrock') {
-            $fields['key'] = 'Bearer Token';
-            $fields['region'] = 'AWS 区域';
+            $fields['key'] = __('moonweft-preference::ai.fields.bearer_token');
+            $fields['region'] = __('moonweft-preference::ai.fields.region');
         } else {
-            $fields['url'] = '接口地址';
+            $fields['url'] = __('moonweft-preference::ai.fields.url');
         }
 
         if ($this->driver($name) === 'azure') {
-            $fields['api_version'] = 'API 版本';
+            $fields['api_version'] = __('moonweft-preference::ai.fields.api_version');
         }
 
-        foreach (self::CAPABILITIES as $capability => $definition) {
+        foreach (array_keys(self::CAPABILITIES) as $capability) {
             if ($this->supports($name, $capability)) {
-                $fields[$this->modelPath($name, $capability)] = $definition['label'].($this->driver($name) === 'azure' ? '部署名称' : '模型');
+                $fields[$this->modelPath($name, $capability)] = __(
+                    $this->driver($name) === 'azure' ? 'moonweft-preference::ai.fields.deployment' : 'moonweft-preference::ai.fields.model',
+                    ['capability' => __('moonweft-preference::ai.capabilities.'.$capability)],
+                );
             }
         }
 
         if ($this->supports($name, 'text')) {
-            $fields['models.text.simple'] = '简单查询模型（可选）';
-            $fields['models.text.complex'] = '分析与业务操作模型（可选）';
+            $fields['models.text.simple'] = __('moonweft-preference::ai.fields.simple_model');
+            $fields['models.text.complex'] = __('moonweft-preference::ai.fields.complex_model');
         }
 
         if ($this->driver($name) === 'deepseek') {
-            $fields['reasoning_effort'] = '推理强度';
+            $fields['reasoning_effort'] = __('moonweft-preference::ai.fields.reasoning_effort');
         }
 
         if ($this->supports($name, 'embeddings')) {
-            $fields['models.embeddings.dimensions'] = '向量维度';
+            $fields['models.embeddings.dimensions'] = __('moonweft-preference::ai.fields.dimensions');
         }
 
         return $fields;

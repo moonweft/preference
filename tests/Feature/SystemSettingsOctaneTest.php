@@ -26,6 +26,7 @@ use MoonWeft\Iam\Models\Admin;
 use MoonWeft\Iam\PermissionSynchronizer;
 use Moonweft\Preference\Ai\AiConfiguration;
 use Moonweft\Preference\Ai\AiSettings;
+use Moonweft\Preference\Ai\ProviderCatalog;
 use Moonweft\Preference\Filament\Pages\SystemSettingsPage;
 use Moonweft\Preference\PreferencePermissionContributor;
 use Moonweft\Preference\SettingsAccess;
@@ -61,6 +62,38 @@ final class SystemSettingsOctaneTest extends TestCase
         $this->worker->terminate();
         unset($_ENV['APP_RUNNING_IN_CONSOLE']);
         parent::tearDown();
+    }
+
+    public function test_ai_provider_copy_follows_each_request_locale_in_the_same_worker(): void
+    {
+        $this->worker->application()->setLocale('en');
+        $this->worker->application()->instance(ProviderCatalog::class, new ProviderCatalog);
+        $this->worker->application()->make(ProviderCatalog::class)->options();
+        $this->worker->application()->make('router')->get('/octane-test/ai-locale', static function (Request $request): array {
+            if ($request->filled('locale')) {
+                app()->setLocale($request->string('locale')->toString());
+            }
+            $catalog = app(ProviderCatalog::class);
+            $copy = [$catalog->options()['openai-compatible'], $catalog->fields('openai')['key'],
+                $catalog->fields('azure')['deployment'], $catalog->fields('deepseek')['reasoning_effort']];
+            abort_if($request->boolean('fail'), 500, 'Synthetic AI language failure');
+
+            return $copy;
+        });
+
+        foreach (['zh_CN', 'en', 'zh_CN', null, 'zh_CN', 'en'] as $index => $locale) {
+            $this->worker->handle(Request::create('/octane-test/ai-locale', 'GET', [
+                'locale' => $locale, 'fail' => $index === 4,
+            ], server: ['HTTP_ACCEPT' => 'application/json']), new RequestContext);
+            $response = array_pop($this->responses);
+            self::assertSame($index === 4 ? 500 : 200, $response->getStatusCode());
+            if ($index !== 4) {
+                self::assertSame($locale === 'zh_CN'
+                    ? ['OpenAI 兼容接口', 'API 密钥', '文本生成部署名称', '推理强度']
+                    : ['OpenAI-compatible API', 'API key', 'Text generation deployment', 'Reasoning effort'],
+                    json_decode($response->getContent(), true));
+            }
+        }
     }
 
     public function test_shared_settings_refresh_and_authority_does_not_leak_between_requests_and_tasks(): void
