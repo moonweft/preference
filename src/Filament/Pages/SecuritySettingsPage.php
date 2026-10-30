@@ -94,17 +94,28 @@ class SecuritySettingsPage extends SettingsPage
 
     protected function beforeSave(): void
     {
+        $confirmation = app(SecurityConfirmation::class);
+        $methods = $confirmation->availableMethods();
+        $password = $methods['password'] ? ($this->data['confirmation_password'] ?? null) : null;
+        $code = $methods['authenticator'] ? ($this->data['confirmation'] ?? null) : null;
+        $attribute = match (true) {
+            filled($code) => 'data.confirmation',
+            $methods['password'] => 'data.confirmation_password',
+            $methods['authenticator'] => 'data.confirmation',
+            default => 'data.mfa_required',
+        };
         try {
-            if (filled($this->data['confirmation_password'] ?? null) || filled($this->data['confirmation'] ?? null)) {
-                app(SecurityConfirmation::class)->verifyCurrentCredential(
-                    $this->data['confirmation_password'] ?? null, $this->data['confirmation'] ?? null,
-                );
+            if (filled($password) || filled($code)) {
+                $confirmation->verifyCurrentCredential($password, $code, $attribute);
             }
         } finally {
             $this->data['confirmation_password'] = null;
             $this->data['confirmation'] = null;
         }
-        app(SecurityConfirmation::class)->assertRecentlyConfirmed();
+        $confirmation->assertRecentlyConfirmed($attribute);
+        if ($this->data['mfa_required'] ?? false) {
+            $confirmation->assertCanRequireMultiFactorAuthentication('data.mfa_required');
+        }
 
         $repository = app(SecuritySettings::class)->getRepository();
         if (! $repository instanceof DatabaseSettingsRepository) {

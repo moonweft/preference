@@ -73,7 +73,10 @@ return [
     'confirmation' => [
         'title' => 'Confirm your identity',
         'description' => 'Security policy changes require identity confirmation within the last five minutes. Enter your current password or authenticator code. SSO-only accounts must use their enrolled authenticator.',
-        'help' => 'To enable or keep saving mandatory two-factor authentication, the current administrator must enrol an authenticator in their profile and verify it within the last five minutes. Neither the code nor the password is stored in settings.',
+        'password_description' => 'Enter your current login password to confirm your identity for five minutes. This account has no enabled authenticator, so no code is needed. Your password is not stored in settings.',
+        'authenticator_description' => 'Password login is disabled for this account. Enter a current code from your enrolled authenticator to confirm your identity for five minutes.',
+        'unavailable_description' => 'This account has neither password login nor an enabled authenticator. Set up an authenticator in your profile before returning to change account security settings.',
+        'help' => 'Enter a current code from the authenticator enrolled for this account. Enabling or retaining mandatory MFA requires successful code verification within the last five minutes. Codes are never stored in settings.',
     ],
     'errors' => [
         'stale' => 'Account security settings were changed by another administrator. Refresh the page and try again.',

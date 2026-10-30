@@ -162,8 +162,9 @@ final class AccountSecuritySettingsTest extends TestCase
     {
         $admin = Admin::factory()->create();
         $this->grant($admin);
-        $page = Livewire::actingAs($admin, 'admin')->test(SecuritySettingsPage::class);
-        $page->fillForm(['password_min_length' => 16])->call('save')->assertHasErrors(['data.confirmation']);
+        $page = Livewire::actingAs($admin, 'admin')->test(SecuritySettingsPage::class)
+            ->assertFormFieldIsVisible('confirmation_password')->assertFormFieldIsHidden('confirmation');
+        $page->fillForm(['password_min_length' => 16])->call('save')->assertHasErrors(['data.confirmation_password']);
         try {
             $settings = new SecuritySettings;
             $settings->password_min_length = 18;
@@ -172,10 +173,43 @@ final class AccountSecuritySettingsTest extends TestCase
         } catch (ValidationException $exception) {
             self::assertArrayHasKey('data.confirmation', $exception->errors());
         }
-        $page->fillForm(['confirmation_password' => 'password'])->call('save')->assertHasNoErrors();
+        $page->fillForm(['confirmation_password' => 'incorrect'])->call('save')->assertHasErrors(['data.confirmation_password']);
+        $page->fillForm(['confirmation_password' => 'password'])->set('data.confirmation', 'stale-code')
+            ->call('save')->assertHasNoErrors();
         self::assertSame(16, (new SecuritySettings)->password_min_length);
         self::assertArrayNotHasKey('confirmation_password', (new SecuritySettings)->toArray());
         self::assertNull($page->get('data.confirmation_password'));
+        self::assertNull($page->get('data.confirmation'));
+    }
+
+    public function test_enabling_mfa_without_an_authenticator_reports_the_policy_field(): void
+    {
+        $admin = Admin::factory()->create();
+        $this->grant($admin);
+        Livewire::actingAs($admin, 'admin')->test(SecuritySettingsPage::class)
+            ->fillForm(['mfa_required' => true, 'confirmation_password' => 'password'])
+            ->call('save')->assertHasErrors(['data.mfa_required'])->assertFormFieldIsHidden('confirmation');
+        self::assertFalse((new SecuritySettings)->mfa_required);
+    }
+
+    public function test_sso_only_accounts_need_an_enrolled_authenticator_for_confirmation(): void
+    {
+        $admin = Admin::factory()->create();
+        $this->grant($admin);
+        $admin->forceFill(['password_login_enabled' => false])->save();
+        Livewire::actingAs($admin, 'admin')->test(SecuritySettingsPage::class)
+            ->assertFormFieldIsHidden('confirmation_password')->assertFormFieldIsHidden('confirmation')
+            ->assertSee(__('moonweft-preference::security.confirmation.unavailable_description'))
+            ->fillForm(['password_min_length' => 16])->set('data.confirmation_password', 'password')
+            ->call('save')->assertHasErrors(['data.mfa_required']);
+        self::assertSame(12, (new SecuritySettings)->password_min_length);
+
+        $admin->saveAppAuthenticationSecret('JBSWY3DPEHPK3PXP');
+        Livewire::test(SecuritySettingsPage::class)
+            ->assertFormFieldIsHidden('confirmation_password')->assertFormFieldIsVisible('confirmation')
+            ->fillForm(['password_min_length' => 16, 'confirmation' => (new Google2FA)->getCurrentOtp('JBSWY3DPEHPK3PXP')])
+            ->call('save')->assertHasNoErrors();
+        self::assertSame(16, (new SecuritySettings)->password_min_length);
     }
 
     public function test_direct_backend_write_requires_recent_identity_confirmation(): void

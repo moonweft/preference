@@ -49,10 +49,10 @@ final class AccountSecurityOctaneTest extends TestCase
             self::assertSame(0, Artisan::call('migrate', ['--force' => true]));
             app(PermissionSynchronizer::class)->sync();
             $actors = Admin::factory()->count(2)->create();
+            $actors[0]->saveAppAuthenticationSecret('JBSWY3DPEHPK3PXP');
             $role = Role::create(['name' => 'security-octane', 'guard_name' => 'admin']);
             $role->givePermissionTo(IamPermission::PanelAccess->value, PreferencePermissionContributor::MANAGE_SECURITY);
             foreach ($actors as $actor) {
-                $actor->saveAppAuthenticationSecret('JBSWY3DPEHPK3PXP');
                 AccountAuthorization::create(['principal_provider' => 'admins', 'principal_id' => (string) $actor->id,
                     'role_ids' => [$role->id], 'organization_ids' => []]);
             }
@@ -72,7 +72,9 @@ final class AccountSecurityOctaneTest extends TestCase
                     abort_if($request->boolean('fail'), 500, 'Synthetic account security failure');
                     if ($actor) {
                         app(SecurityConfirmation::class)->verifyCurrentCredential('password', null);
-                        app(AdminMfaSession::class)->confirm($actor);
+                        if (app(SecurityConfirmation::class)->availableMethods()['authenticator']) {
+                            app(AdminMfaSession::class)->confirm($actor);
+                        }
                     }
                     $settings->save();
                 }
@@ -81,6 +83,7 @@ final class AccountSecurityOctaneTest extends TestCase
                 return ['previous_actor' => $beforeActor, 'before' => $before,
                     'minimum' => $settings->password_min_length, 'mfa' => $policy->requiresMultiFactorAuthentication(),
                     'short_password_passes' => Validator::make(['password' => 'twelvechars!'], ['password' => $policy->passwordRule()])->passes(),
+                    'confirmation_methods' => $actor ? app(SecurityConfirmation::class)->availableMethods() : null,
                     'can_edit' => SecuritySettingsPage::canAccess()];
             });
 
@@ -94,14 +97,16 @@ final class AccountSecurityOctaneTest extends TestCase
                 self::assertSame($status, $response->getStatusCode(), $response->getContent());
                 if ($status === 200) {
                     self::assertSame(['previous_actor' => null, 'before' => $previous, 'minimum' => $length,
-                        'mfa' => $mfa, 'short_password_passes' => $length === 12, 'can_edit' => true], json_decode($response->getContent(), true));
+                        'mfa' => $mfa, 'short_password_passes' => $length === 12,
+                        'confirmation_methods' => ['password' => true, 'authenticator' => $index === 0],
+                        'can_edit' => true], json_decode($response->getContent(), true));
                     $previous = [$length, $mfa];
                 }
             }
             $worker->handle(Request::create('/octane-test/account-security', server: ['HTTP_ACCEPT' => 'application/json']), new RequestContext);
             $response = array_pop($responses);
             self::assertSame(['previous_actor' => null, 'before' => [12, false], 'minimum' => 12,
-                'mfa' => false, 'short_password_passes' => true, 'can_edit' => false], json_decode($response->getContent(), true));
+                'mfa' => false, 'short_password_passes' => true, 'confirmation_methods' => null, 'can_edit' => false], json_decode($response->getContent(), true));
         } finally {
             $worker->terminate();
             unset($_ENV['APP_RUNNING_IN_CONSOLE']);

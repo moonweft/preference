@@ -9,11 +9,14 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use MoonWeft\Components\Slider\Forms\Slider;
 use MoonWeft\Components\Text\Forms\AdvancedTextInput;
+use MoonWeft\Iam\SecurityConfirmation;
 
 final class SecuritySettingsForm
 {
     public static function configure(Schema $schema): Schema
     {
+        $confirmationMethods = app(SecurityConfirmation::class)->availableMethods();
+
         return $schema->components([
             Section::make(__('moonweft-preference::security.password.title'))
                 ->description(__('moonweft-preference::security.password.description'))
@@ -48,12 +51,19 @@ final class SecuritySettingsForm
                 ->description(__('moonweft-preference::security.notifications.description'))
                 ->schema(self::toggles(['notify_login', 'notify_password_changed']))->columns(2)->columnSpanFull(),
             Section::make(__('moonweft-preference::security.confirmation.title'))
-                ->description(__('moonweft-preference::security.confirmation.description'))
+                ->description(__('moonweft-preference::security.confirmation.'.match (true) {
+                    $confirmationMethods['password'] && $confirmationMethods['authenticator'] => 'description',
+                    $confirmationMethods['password'] => 'password_description',
+                    $confirmationMethods['authenticator'] => 'authenticator_description',
+                    default => 'unavailable_description',
+                }))
                 ->schema([
                     AdvancedTextInput::make('confirmation_password')->password()->autocomplete('current-password')
-                        ->label(__('moonweft-preference::security.fields.confirmation_password'))->dehydrated(false),
+                        ->label(__('moonweft-preference::security.fields.confirmation_password'))->dehydrated(false)
+                        ->visible($confirmationMethods['password']),
                     AdvancedTextInput::make('confirmation')->autocomplete('one-time-code')
                         ->label(__('moonweft-preference::security.fields.confirmation'))->dehydrated(false)
+                        ->visible($confirmationMethods['authenticator'])
                         ->helperText(__('moonweft-preference::security.confirmation.help')),
                 ])->columns(2)->columnSpanFull(),
         ]);
