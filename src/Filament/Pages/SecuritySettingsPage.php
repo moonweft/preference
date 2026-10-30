@@ -10,6 +10,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Locked;
+use MoonWeft\Iam\SecurityConfirmation;
 use Moonweft\Preference\Filament\Schemas\SecuritySettingsForm;
 use Moonweft\Preference\PreferencePermissionContributor;
 use Moonweft\Preference\Security\SecuritySettings;
@@ -93,6 +94,18 @@ class SecuritySettingsPage extends SettingsPage
 
     protected function beforeSave(): void
     {
+        try {
+            if (filled($this->data['confirmation_password'] ?? null) || filled($this->data['confirmation'] ?? null)) {
+                app(SecurityConfirmation::class)->verifyCurrentCredential(
+                    $this->data['confirmation_password'] ?? null, $this->data['confirmation'] ?? null,
+                );
+            }
+        } finally {
+            $this->data['confirmation_password'] = null;
+            $this->data['confirmation'] = null;
+        }
+        app(SecurityConfirmation::class)->assertRecentlyConfirmed();
+
         $repository = app(SecuritySettings::class)->getRepository();
         if (! $repository instanceof DatabaseSettingsRepository) {
             throw new \LogicException(__('moonweft-preference::security.errors.database_required'));

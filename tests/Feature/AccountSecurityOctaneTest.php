@@ -15,10 +15,12 @@ use Laravel\Octane\OctaneResponse;
 use Laravel\Octane\RequestContext;
 use Laravel\Octane\Worker;
 use MoonWeft\Iam\AccountSecurityPolicy;
+use MoonWeft\Iam\AdminMfaSession;
 use MoonWeft\Iam\IamPermission;
 use MoonWeft\Iam\Models\AccountAuthorization;
 use MoonWeft\Iam\Models\Admin;
 use MoonWeft\Iam\PermissionSynchronizer;
+use MoonWeft\Iam\SecurityConfirmation;
 use Moonweft\Preference\Filament\Pages\SecuritySettingsPage;
 use Moonweft\Preference\PreferencePermissionContributor;
 use Moonweft\Preference\Security\SecuritySettings;
@@ -50,6 +52,7 @@ final class AccountSecurityOctaneTest extends TestCase
             $role = Role::create(['name' => 'security-octane', 'guard_name' => 'admin']);
             $role->givePermissionTo(IamPermission::PanelAccess->value, PreferencePermissionContributor::MANAGE_SECURITY);
             foreach ($actors as $actor) {
+                $actor->saveAppAuthenticationSecret('JBSWY3DPEHPK3PXP');
                 AccountAuthorization::create(['principal_provider' => 'admins', 'principal_id' => (string) $actor->id,
                     'role_ids' => [$role->id], 'organization_ids' => []]);
             }
@@ -60,12 +63,17 @@ final class AccountSecurityOctaneTest extends TestCase
                 if ($actor = $request->attributes->get('security_test_actor')) {
                     auth('admin')->setUser($actor);
                 }
+                $request->setLaravelSession(app('session.store'));
                 $settings = app(SecuritySettings::class);
                 $before = [$settings->password_min_length, $settings->mfa_required];
                 if ($request->isMethod('POST')) {
                     $settings->password_min_length = $request->integer('length');
                     $settings->mfa_required = $request->boolean('mfa');
                     abort_if($request->boolean('fail'), 500, 'Synthetic account security failure');
+                    if ($actor) {
+                        app(SecurityConfirmation::class)->verifyCurrentCredential('password', null);
+                        app(AdminMfaSession::class)->confirm($actor);
+                    }
                     $settings->save();
                 }
                 $policy = app(AccountSecurityPolicy::class);

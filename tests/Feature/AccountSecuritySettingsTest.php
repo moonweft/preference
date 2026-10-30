@@ -16,9 +16,11 @@ use MoonWeft\Iam\Models\AccountAuthorization;
 use MoonWeft\Iam\Models\Admin;
 use MoonWeft\Iam\Models\User;
 use MoonWeft\Iam\PermissionSynchronizer;
+use MoonWeft\Iam\SecurityConfirmation;
 use Moonweft\Preference\Filament\Pages\SecuritySettingsPage;
 use Moonweft\Preference\PreferencePermissionContributor;
 use Moonweft\Preference\Security\SecuritySettings;
+use PragmaRX\Google2FA\Google2FA;
 use Spatie\Permission\Models\Role;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
@@ -30,6 +32,7 @@ final class AccountSecuritySettingsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        ini_set('memory_limit', '256M');
         app(PermissionSynchronizer::class)->sync();
         Filament::setCurrentPanel(Filament::getPanel('admin'));
     }
@@ -38,9 +41,11 @@ final class AccountSecuritySettingsTest extends TestCase
     {
         $admin = Admin::factory()->create();
         $this->grant($admin);
+        $admin->saveAppAuthenticationSecret('JBSWY3DPEHPK3PXP');
         Livewire::actingAs($admin, 'admin')->test(SecuritySettingsPage::class)
             ->fillForm(['password_min_length' => 16, 'password_letters' => true, 'password_mixed_case' => true,
-                'password_numbers' => true, 'password_symbols' => true, 'mfa_required' => true])
+                'password_numbers' => true, 'password_symbols' => true, 'mfa_required' => true,
+                'confirmation' => (new Google2FA)->getCurrentOtp('JBSWY3DPEHPK3PXP')])
             ->call('save')->assertHasNoFormErrors();
         app()->forgetInstance(SecuritySettings::class);
 
@@ -129,6 +134,7 @@ final class AccountSecuritySettingsTest extends TestCase
         $page = Livewire::actingAs($admin, 'admin')->test(SecuritySettingsPage::class);
         $settings = new SecuritySettings;
         $settings->password_min_length = 20;
+        app(SecurityConfirmation::class)->verifyCurrentCredential('password', null);
         $settings->save();
 
         $page->fillForm(['password_min_length' => 16])->call('save')->assertHasErrors(['data']);
@@ -150,6 +156,68 @@ final class AccountSecuritySettingsTest extends TestCase
         $page->call('save')->assertForbidden();
         $this->expectException(HttpException::class);
         (new SecuritySettings)->save();
+    }
+
+    public function test_security_save_requires_recent_identity_proof_in_the_page_and_backend(): void
+    {
+        $admin = Admin::factory()->create();
+        $this->grant($admin);
+        $page = Livewire::actingAs($admin, 'admin')->test(SecuritySettingsPage::class);
+        $page->fillForm(['password_min_length' => 16])->call('save')->assertHasErrors(['data.confirmation']);
+        try {
+            $settings = new SecuritySettings;
+            $settings->password_min_length = 18;
+            $settings->save();
+            self::fail('Calling the settings service must not bypass recent identity proof.');
+        } catch (ValidationException $exception) {
+            self::assertArrayHasKey('data.confirmation', $exception->errors());
+        }
+        $page->fillForm(['confirmation_password' => 'password'])->call('save')->assertHasNoErrors();
+        self::assertSame(16, (new SecuritySettings)->password_min_length);
+        self::assertArrayNotHasKey('confirmation_password', (new SecuritySettings)->toArray());
+        self::assertNull($page->get('data.confirmation_password'));
+    }
+
+    public function test_direct_backend_write_requires_recent_identity_confirmation(): void
+    {
+        $admin = Admin::factory()->create();
+        $this->grant($admin);
+        $this->actingAs($admin, 'admin');
+        $this->expectException(ValidationException::class);
+        (new SecuritySettings)->save();
+    }
+
+    public function test_all_security_settings_reach_the_runtime_policy_and_reject_invalid_values(): void
+    {
+        $admin = Admin::factory()->create();
+        $this->grant($admin);
+        Livewire::actingAs($admin, 'admin')->test(SecuritySettingsPage::class)->fillForm([
+            'password_history_count' => 6, 'password_max_age_days' => 90, 'force_initial_password_change' => true,
+            'login_max_attempts' => 4, 'login_window_seconds' => 300, 'login_lockout_seconds' => 600,
+            'session_idle_minutes' => 30, 'session_absolute_minutes' => 480,
+            'remember_login_enabled' => false, 'remember_login_days' => 7,
+            'notify_login' => true, 'notify_password_changed' => true, 'confirmation_password' => 'password',
+        ])->call('save')->assertHasNoErrors();
+        app()->forgetInstance(SecuritySettings::class);
+        $policy = app(AccountSecurityPolicy::class);
+        self::assertSame([6, 90, true, 4, 300, 600, 30, 480, false, 7, true, true], [
+            $policy->passwordHistoryCount(), $policy->passwordMaxAgeDays(), $policy->forceInitialPasswordChange(),
+            $policy->loginMaxAttempts(), $policy->loginWindowSeconds(), $policy->loginLockoutSeconds(),
+            $policy->sessionIdleMinutes(), $policy->sessionAbsoluteMinutes(), $policy->rememberLoginEnabled(),
+            $policy->rememberLoginDays(), $policy->notifyLogin(), $policy->notifyPasswordChanged(),
+        ]);
+        foreach (['password_history_count' => 25, 'password_max_age_days' => -1, 'login_max_attempts' => 0,
+            'login_window_seconds' => 0, 'login_lockout_seconds' => 86401, 'session_idle_minutes' => 0,
+            'session_absolute_minutes' => -1, 'remember_login_days' => 401] as $field => $value) {
+            $settings = new SecuritySettings;
+            $settings->{$field} = $value;
+            try {
+                $settings->save();
+                self::fail('Invalid security limits must not be stored.');
+            } catch (ValidationException $exception) {
+                self::assertArrayHasKey($field, $exception->errors());
+            }
+        }
     }
 
     private function grant(Admin $admin, string $permission = PreferencePermissionContributor::MANAGE_SECURITY, array $organisations = []): Role

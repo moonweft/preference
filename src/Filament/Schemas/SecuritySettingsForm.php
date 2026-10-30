@@ -22,11 +22,21 @@ final class SecuritySettingsForm
                         ->integer()->required()->minValue(12)->maxValue(72)
                         ->suffix(__('moonweft-preference::security.password.characters'))
                         ->helperText(__('moonweft-preference::security.password.length_help')),
-                    ...array_map(static fn (string $field): Toggle => Toggle::make($field)
-                        ->label(__('moonweft-preference::security.fields.'.$field))
-                        ->helperText(__('moonweft-preference::security.help.'.$field)),
-                        ['password_letters', 'password_mixed_case', 'password_numbers', 'password_symbols']),
-                ])->columnSpanFull(),
+                    ...self::toggles(['password_letters', 'password_mixed_case', 'password_numbers', 'password_symbols']),
+                    ...self::numbers(['password_history_count' => [0, 24], 'password_max_age_days' => [0, 365]]),
+                    ...self::toggles(['force_initial_password_change']),
+                ])->columns(2)->columnSpanFull(),
+            Section::make(__('moonweft-preference::security.login.title'))
+                ->description(__('moonweft-preference::security.login.description'))
+                ->schema(self::numbers(['login_max_attempts' => [1, 20], 'login_window_seconds' => [60, 3600],
+                    'login_lockout_seconds' => [60, 86400]]))->columns(3)->columnSpanFull(),
+            Section::make(__('moonweft-preference::security.session.title'))
+                ->description(__('moonweft-preference::security.session.description'))
+                ->schema([
+                    ...self::numbers(['session_idle_minutes' => [5, 1440], 'session_absolute_minutes' => [0, 10080]]),
+                    ...self::toggles(['remember_login_enabled']),
+                    ...self::numbers(['remember_login_days' => [1, 400]]),
+                ])->columns(2)->columnSpanFull(),
             Section::make(__('moonweft-preference::security.mfa.title'))
                 ->description(__('moonweft-preference::security.mfa.description'))
                 ->schema([
@@ -34,6 +44,39 @@ final class SecuritySettingsForm
                         ->label(__('moonweft-preference::security.fields.mfa_required'))
                         ->helperText(__('moonweft-preference::security.mfa.help')),
                 ])->columnSpanFull(),
+            Section::make(__('moonweft-preference::security.notifications.title'))
+                ->description(__('moonweft-preference::security.notifications.description'))
+                ->schema(self::toggles(['notify_login', 'notify_password_changed']))->columns(2)->columnSpanFull(),
+            Section::make(__('moonweft-preference::security.confirmation.title'))
+                ->description(__('moonweft-preference::security.confirmation.description'))
+                ->schema([
+                    AdvancedTextInput::make('confirmation_password')->password()->autocomplete('current-password')
+                        ->label(__('moonweft-preference::security.fields.confirmation_password'))->dehydrated(false),
+                    AdvancedTextInput::make('confirmation')->autocomplete('one-time-code')
+                        ->label(__('moonweft-preference::security.fields.confirmation'))->dehydrated(false)
+                        ->helperText(__('moonweft-preference::security.confirmation.help')),
+                ])->columns(2)->columnSpanFull(),
         ]);
+    }
+
+    /** @return array<Toggle> */
+    private static function toggles(array $fields): array
+    {
+        return array_map(static fn (string $field): Toggle => Toggle::make($field)
+            ->label(__('moonweft-preference::security.fields.'.$field))
+            ->helperText(__('moonweft-preference::security.help.'.$field)), $fields);
+    }
+
+    /** @return array<AdvancedTextInput> */
+    private static function numbers(array $ranges): array
+    {
+        $fields = [];
+        foreach ($ranges as $name => [$minimum, $maximum]) {
+            $fields[] = AdvancedTextInput::make($name)->integer()->required()->minValue($minimum)->maxValue($maximum)
+                ->label(__('moonweft-preference::security.fields.'.$name))
+                ->helperText(__('moonweft-preference::security.help.'.$name));
+        }
+
+        return $fields;
     }
 }
