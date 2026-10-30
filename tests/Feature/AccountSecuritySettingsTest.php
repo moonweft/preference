@@ -65,7 +65,7 @@ final class AccountSecuritySettingsTest extends TestCase
         foreach (['en', 'zh_CN', 'en'] as $locale) {
             app()->setLocale($locale);
             $page = Livewire::actingAs($admin, 'admin')->test(SecuritySettingsPage::class)->assertSuccessful();
-            $html = $page->instance()->form->toHtml();
+            $html = $page->html();
             self::assertStringContainsString(__('moonweft-preference::security.password.title'), $html);
             self::assertStringContainsString(__('moonweft-preference::security.fields.mfa_required'), $html);
             self::assertStringNotContainsString('moonweft-preference::', $html);
@@ -191,7 +191,7 @@ final class AccountSecuritySettingsTest extends TestCase
     {
         $admin = Admin::factory()->create();
         $this->grant($admin);
-        Livewire::actingAs($admin, 'admin')->test(SecuritySettingsPage::class)->fillForm([
+        $page = Livewire::actingAs($admin, 'admin')->test(SecuritySettingsPage::class)->fillForm([
             'password_history_count' => 6, 'password_max_age_days' => 90, 'force_initial_password_change' => true,
             'login_max_attempts' => 4, 'login_window_seconds' => 300, 'login_lockout_seconds' => 600,
             'session_idle_minutes' => 30, 'session_absolute_minutes' => 480,
@@ -205,6 +205,13 @@ final class AccountSecuritySettingsTest extends TestCase
             $policy->loginMaxAttempts(), $policy->loginWindowSeconds(), $policy->loginLockoutSeconds(),
             $policy->sessionIdleMinutes(), $policy->sessionAbsoluteMinutes(), $policy->rememberLoginEnabled(),
             $policy->rememberLoginDays(), $policy->notifyLogin(), $policy->notifyPasswordChanged(),
+        ]);
+        $page->fillForm(['password_history_count' => 0, 'password_max_age_days' => 0,
+            'session_absolute_minutes' => 0, 'confirmation_password' => 'password'])
+            ->call('save')->assertHasNoErrors();
+        app()->forgetInstance(SecuritySettings::class);
+        self::assertSame([0, 0, 0], [
+            $policy->passwordHistoryCount(), $policy->passwordMaxAgeDays(), $policy->sessionAbsoluteMinutes(),
         ]);
         foreach (['password_history_count' => 25, 'password_max_age_days' => -1, 'login_max_attempts' => 0,
             'login_window_seconds' => 0, 'login_lockout_seconds' => 86401, 'session_idle_minutes' => 0,

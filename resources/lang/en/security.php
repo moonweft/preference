@@ -18,7 +18,7 @@ return [
         'notify_password_changed' => 'Password change alerts',
         'confirmation_password' => 'Current password',
         'confirmation' => 'Authenticator code',
-        'password_min_length' => 'Minimum password length',
+        'password_min_length' => 'Minimum password length (characters)',
         'password_letters' => 'Require letters',
         'password_mixed_case' => 'Require uppercase and lowercase letters',
         'password_numbers' => 'Require numbers',
@@ -28,10 +28,14 @@ return [
     'password' => [
         'title' => 'Password policy',
         'description' => 'Shared by all backend administrator and employee accounts. Applies when an administrator creates or changes an account password, or when a user changes or resets their password. Strength applies on the next password write; expiry and initial-change requirements are enforced separately. Applicant portal accounts are outside this policy.',
-        'characters' => 'characters',
-        'length_help' => 'Choose 12–72 characters. The existing minimum is 12. Passwords must also fit within 72 bytes and cannot contain null characters; non-ASCII characters may use multiple bytes.',
+    ],
+    'zero_options' => [
+        'password_history_count' => 'Disabled',
+        'password_max_age_days' => 'No expiry',
+        'session_absolute_minutes' => 'No extra limit',
     ],
     'help' => [
+        'password_min_length' => 'Choose 12–72 characters. The existing minimum is 12. Passwords must also fit within 72 bytes and cannot contain null characters; non-ASCII characters may use multiple bytes.',
         'password_history_count' => 'Use 0 to disable or 1–24 previous passwords. When enabled, reject the current password and retained history. History starts when this option is enabled; earlier passwords cannot be reconstructed.',
         'password_max_age_days' => 'Use 0 for no expiry or 1–365 days. Expired accounts must change their password before accessing business pages. Existing accounts start from feature installation. SSO-only accounts are exempt from local password expiry.',
         'force_initial_password_change' => 'When enabled, creating an account or assigning someone else a password requires them to change it at their next backend visit. Existing accounts are not automatically flagged. A personal password change or the existing password reset flow clears the flag.',

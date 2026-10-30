@@ -18,7 +18,7 @@ return [
         'notify_password_changed' => '密码修改提醒',
         'confirmation_password' => '当前密码',
         'confirmation' => '验证器验证码',
-        'password_min_length' => '密码最小长度',
+        'password_min_length' => '密码最小长度（字符）',
         'password_letters' => '必须包含字母',
         'password_mixed_case' => '必须同时包含大小写字母',
         'password_numbers' => '必须包含数字',
@@ -28,10 +28,14 @@ return [
     'password' => [
         'title' => '密码策略',
         'description' => '所有后台管理员和员工账户共用。管理员创建或修改账户密码、用户修改个人密码及重置密码时执行；强度规则在下次设密时生效，密码到期与首次修改要求单独执行。候选人门户账户不在此策略范围内。',
-        'characters' => '字符',
-        'length_help' => '可填写 12–72 个字符，保持现有最低 12 位要求。密码同时不能超过 72 字节，也不能包含空字符；中文等字符可能占用多个字节。',
+    ],
+    'zero_options' => [
+        'password_history_count' => '关闭',
+        'password_max_age_days' => '不过期',
+        'session_absolute_minutes' => '不额外限制',
     ],
     'help' => [
+        'password_min_length' => '可选择 12–72 个字符，保持现有最低 12 位要求。密码同时不能超过 72 字节，也不能包含空字符；中文等字符可能占用多个字节。',
         'password_history_count' => '0 表示关闭，可设置 1–24 次。启用后禁止使用当前密码及保留的历史密码；历史从启用后开始记录，无法追溯更早的密码。',
         'password_max_age_days' => '0 表示不过期，可设置 1–365 天。到期后先修改密码才能访问业务页面。现存账户从本功能上线时起算；仅使用 SSO 的账户不受本地密码到期限制。',
         'force_initial_password_change' => '开启后，管理员新建账户或为他人设置密码时，要求本人下次进入后台先修改密码。已有账户不自动标记；本人修改和原有密码重置流程完成后解除该标记。',
