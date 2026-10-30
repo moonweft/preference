@@ -8,6 +8,7 @@ use Filament\Contracts\Plugin;
 use Filament\Navigation\NavigationGroup;
 use Filament\Panel;
 use Filament\Support\Assets\Theme;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Foundation\Vite;
 use Moonweft\Preference\Filament\Pages\AiSettingsPage;
 use Moonweft\Preference\Filament\Pages\SecuritySettingsPage;
@@ -41,6 +42,11 @@ final class PreferencePlugin implements Plugin
             ->theme(Theme::make('system-appearance')->html(static fn () => app(Vite::class)(
                 Appearance::THEMES[app(SystemSettings::class)->panel_theme],
             )))
+            ->renderHook(PanelsRenderHook::HEAD_END, static fn () => view('moonweft-preference::typography', [
+                'theme' => app(SystemSettings::class)->panel_theme,
+                'scale' => in_array(app(SystemSettings::class)->font_scale, Appearance::FONT_SCALES, true)
+                    ? app(SystemSettings::class)->font_scale / 100 : 1.25,
+            ]))
             ->topbar(static fn (): bool => app(SystemSettings::class)->panel_theme !== 'sharp')
             ->colors(static fn (): array => app(SystemSettings::class)->colors());
     }

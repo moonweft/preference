@@ -7,6 +7,8 @@ namespace Moonweft\Preference\System;
 /** Installed admin themes and curated primary/neutral colour combinations. */
 final class Appearance
 {
+    public const FONT_SCALES = [100, 110, 125, 150];
+
     public const THEMES = [
         'sharp' => 'resources/css/filament/admin/sharp.css',
         'orbit' => 'resources/css/filament/admin/orbit.css',

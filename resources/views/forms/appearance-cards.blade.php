@@ -17,10 +17,19 @@
                 <input type="radio" name="{{ $getId() }}" id="{{ $getId() }}-{{ $value }}"
                     value="{{ $value }}" {{ $applyStateBindingModifiers('wire:model') }}="{{ $getStatePath() }}"
                     @disabled($isDisabled()) @required($isRequired()) />
+                @if ($kind === 'typography')
+                    <span class="mw-font-preview" data-font-preview="{{ $theme }}"
+                        style="--moonweft-font-scale: {{ ((int) $value) / 100 }}">
+                        <span class="mw-font-preview-heading">{{ __('moonweft-preference::theme.preview_heading') }}</span>
+                        <span class="mw-font-preview-body">{{ __('moonweft-preference::theme.preview_body') }}</span>
+                        <span class="mw-font-preview-helper">{{ __('moonweft-preference::theme.preview_helper') }}</span>
+                    </span>
+                @else
                 <span class="mw-appearance-preview {{ $kind === 'theme' ? 'mw-preview-'.$value : '' }}" aria-hidden="true">
                     <span class="mw-preview-sidebar"><i></i><i></i><i></i><i></i></span>
                     <span class="mw-preview-main"><span class="mw-preview-heading"></span><span class="mw-preview-cards"><i></i><i></i></span><span class="mw-preview-table"><i></i><i></i><i></i></span></span>
                 </span>
+                @endif
                 @if ($kind === 'palette')
                     <span class="mw-appearance-swatches" aria-hidden="true"><i style="background: {{ $primary[600] }}"></i><i style="background: {{ $primary[400] }}"></i><i style="background: {{ $primary[100] }}"></i><i style="background: {{ $gray[200] }}"></i><i style="background: {{ $gray[800] }}"></i></span>
                 @endif

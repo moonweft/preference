@@ -73,7 +73,7 @@ final class SystemAppearanceOctaneTest extends TestCase
                 }
                 $settings = app(SystemSettings::class);
                 if ($request->isMethod('POST')) {
-                    $settings->fill($request->only(['primary_color', 'gray_color', 'panel_theme']));
+                    $settings->fill($request->only(['primary_color', 'gray_color', 'panel_theme', 'font_scale']));
                     if ($request->boolean('fail')) {
                         Filament::bootCurrentPanel();
                         FilamentColor::getColors();
@@ -92,27 +92,29 @@ final class SystemAppearanceOctaneTest extends TestCase
                     str_contains(FilamentView::renderHook(PanelsRenderHook::HEAD_START)->toHtml(), 'data-system-theme'),
                     str_contains($panel->getTheme()->getHtml()->toHtml(), app(Vite::class)->asset(Appearance::THEMES[$settings->panel_theme])),
                     $panel->hasTopbar(),
+                    str_contains(FilamentView::renderHook(PanelsRenderHook::HEAD_END)->toHtml(), '--moonweft-font-scale: '.($settings->font_scale / 100)),
+                    $settings->font_scale,
                 ];
             });
 
-            foreach ([[0, 'mauve', 'stone', 'sharp'], [1, 'olive', 'zinc', 'orbit'], [0, 'blue', 'slate', 'sharp']] as [$actor, $primary, $gray, $theme]) {
-                $request = Request::create('/octane-test/appearance', 'POST', ['primary_color' => $primary, 'gray_color' => $gray, 'panel_theme' => $theme], server: ['HTTP_ACCEPT' => 'application/json']);
+            foreach ([[0, 'mauve', 'stone', 'sharp', 100], [1, 'olive', 'zinc', 'orbit', 150], [0, 'blue', 'slate', 'sharp', 125]] as [$actor, $primary, $gray, $theme, $scale]) {
+                $request = Request::create('/octane-test/appearance', 'POST', ['primary_color' => $primary, 'gray_color' => $gray, 'panel_theme' => $theme, 'font_scale' => $scale], server: ['HTTP_ACCEPT' => 'application/json']);
                 $request->attributes->set('test_actor', $actors[$actor]);
                 $worker->handle($request, new RequestContext);
                 self::assertSame(200, $response->getStatusCode(), $response->getContent());
 
                 $worker->handle(Request::create('/octane-test/appearance'), new RequestContext);
-                self::assertSame([null, false, Color::all()[$primary], Color::all()[$gray], true, false, true, false, true, $theme !== 'sharp'], json_decode($response->getContent(), true));
+                self::assertSame([null, false, Color::all()[$primary], Color::all()[$gray], true, false, true, false, true, $theme !== 'sharp', true, $scale], json_decode($response->getContent(), true));
             }
 
             // Both missing authority and an exception must leave the shared appearance intact.
             foreach ([[null, false, 403], [$actors[1], true, 500]] as [$actor, $fail, $status]) {
-                $request = Request::create('/octane-test/appearance', 'POST', ['primary_color' => 'rose', 'panel_theme' => 'orbit', 'fail' => $fail], server: ['HTTP_ACCEPT' => 'application/json']);
+                $request = Request::create('/octane-test/appearance', 'POST', ['primary_color' => 'rose', 'panel_theme' => 'orbit', 'font_scale' => 150, 'fail' => $fail], server: ['HTTP_ACCEPT' => 'application/json']);
                 $request->attributes->set('test_actor', $actor);
                 $worker->handle($request, new RequestContext);
                 self::assertSame($status, $response->getStatusCode());
                 $worker->handle(Request::create('/octane-test/appearance'), new RequestContext);
-                self::assertSame([null, false, Color::Blue, Color::Slate, true, false, true, false, true, false], json_decode($response->getContent(), true));
+                self::assertSame([null, false, Color::Blue, Color::Slate, true, false, true, false, true, false, true, 125], json_decode($response->getContent(), true));
             }
 
             $worker->handleTask(static function () use ($role): void {
@@ -131,10 +133,11 @@ final class SystemAppearanceOctaneTest extends TestCase
             self::assertInstanceOf(TaskExceptionResult::class, $worker->handleTask(static function (): void {
                 app(SystemSettings::class)->primary_color = 'rose';
                 app(SystemSettings::class)->panel_theme = 'orbit';
+                app(SystemSettings::class)->font_scale = 150;
                 throw new \RuntimeException('Synthetic appearance task failure');
             }));
-            self::assertSame(['blue', 'sharp', false], $worker->handleTask(static fn (): array => [
-                app(SystemSettings::class)->primary_color, app(SystemSettings::class)->panel_theme, SystemSettingsPage::canAccess(),
+            self::assertSame(['blue', 'sharp', 125, false], $worker->handleTask(static fn (): array => [
+                app(SystemSettings::class)->primary_color, app(SystemSettings::class)->panel_theme, app(SystemSettings::class)->font_scale, SystemSettingsPage::canAccess(),
             ])->result);
         } finally {
             $worker->terminate();

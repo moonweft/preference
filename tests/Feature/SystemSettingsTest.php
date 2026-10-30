@@ -57,7 +57,7 @@ final class SystemSettingsTest extends TestCase
 
         $this->assertSame([
             'timezone' => 'Asia/Shanghai', 'date_format' => 'd/m/Y', 'time_format' => 'h:i A',
-            'primary_color' => 'blue', 'gray_color' => 'slate', 'panel_theme' => 'sharp',
+            'primary_color' => 'blue', 'gray_color' => 'slate', 'panel_theme' => 'sharp', 'font_scale' => 125,
         ], (new SystemSettings)->toArray());
     }
 

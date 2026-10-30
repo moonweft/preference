@@ -53,6 +53,8 @@ final class SystemSettings extends Settings
 
     public string $panel_theme = 'sharp';
 
+    public int $font_scale = 125;
+
     public static function group(): string
     {
         return 'preference_system';
@@ -100,6 +102,7 @@ final class SystemSettings extends Settings
             'primary_color' => ['required', Rule::in(self::PRIMARY_COLORS)],
             'gray_color' => ['required', Rule::in(self::GRAY_COLORS)],
             'panel_theme' => ['required', Rule::in(array_keys(Appearance::THEMES))],
+            'font_scale' => ['required', 'integer', Rule::in(Appearance::FONT_SCALES)],
         ], attributes: [...__('moonweft-preference::system.fields'), ...__('moonweft-preference::theme.fields')])->validate();
 
         return DB::transaction(function () use ($principal, $values): self {

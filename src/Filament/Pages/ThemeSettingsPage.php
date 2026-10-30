@@ -34,6 +34,11 @@ final class ThemeSettingsPage extends SystemSettingsPage
         return ThemeSettingsForm::configure($schema);
     }
 
+    public function getRedirectUrl(): ?string
+    {
+        return self::getUrl();
+    }
+
     protected function mutateFormDataBeforeFill(array $data): array
     {
         return [...parent::mutateFormDataBeforeFill($data),

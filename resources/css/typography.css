@@ -1,0 +1,54 @@
+@layer components {
+    .fi-body {
+        --text-xs: calc(.75rem * var(--moonweft-font-scale, 1));
+        --text-sm: calc(.875rem * var(--moonweft-font-scale, 1));
+        --text-base: calc(1rem * var(--moonweft-font-scale, 1));
+        --text-lg: calc(1.125rem * var(--moonweft-font-scale, 1));
+        --text-xl: calc(1.25rem * var(--moonweft-font-scale, 1));
+        --text-2xl: calc(1.5rem * var(--moonweft-font-scale, 1));
+        --text-3xl: calc(1.875rem * var(--moonweft-font-scale, 1));
+        --text-4xl: calc(2.25rem * var(--moonweft-font-scale, 1));
+        --text-5xl: calc(3rem * var(--moonweft-font-scale, 1));
+        --text-6xl: calc(3.75rem * var(--moonweft-font-scale, 1));
+        --text-7xl: calc(4.5rem * var(--moonweft-font-scale, 1));
+        --text-8xl: calc(6rem * var(--moonweft-font-scale, 1));
+        --text-9xl: calc(8rem * var(--moonweft-font-scale, 1));
+        font-size: var(--text-base);
+    }
+}
+
+.mw-font-preview {
+    display: grid;
+    gap: .5rem;
+    padding-bottom: 1.5rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+.mw-font-preview-heading { font-size: calc(1.875rem * var(--moonweft-font-scale)); font-weight: 600; }
+.mw-font-preview-body { font-size: calc(.875rem * var(--moonweft-font-scale)); }
+.mw-font-preview-helper { font-size: calc(.75rem * var(--moonweft-font-scale)); color: var(--gray-500); }
+.mw-font-preview[data-font-preview="sharp"] {
+    .mw-font-preview-heading { font-size: calc(1.25rem * var(--moonweft-font-scale)); }
+    .mw-font-preview-body { font-size: calc(.75rem * var(--moonweft-font-scale)); }
+    .mw-font-preview-helper { font-size: calc(.625rem * var(--moonweft-font-scale)); }
+}
+
+/* Orbit contains fixed sizes outside Tailwind's shared type scale. */
+html:has(style[data-moonweft-theme="orbit"]) {
+    .fi-ta-header-cell,
+    .fi-ta-header-group-cell { font-size: calc(.875rem * var(--moonweft-font-scale, 1)); }
+    .fi-btn.fi-size-xl,
+    .orbit-topbar-date-weather__weather,
+    .orbit-hero-card__title { font-size: calc(1rem * var(--moonweft-font-scale, 1)); }
+    .fi-header-heading { font-size: calc(clamp(1.8rem, 2.4vw, 2.45rem) * var(--moonweft-font-scale, 1)); }
+    .orbit-topbar-date-weather__date,
+    .orbit-hero-card__subtitle { font-size: calc(.8125rem * var(--moonweft-font-scale, 1)); }
+    .orbit-sidebar-brand__mark { font-size: calc(1.15rem * var(--moonweft-font-scale, 1)); }
+    .fi-topbar .fi-global-search .fi-input { font-size: calc(.98rem * var(--moonweft-font-scale, 1)); }
+    .fi-tenant-menu-trigger-current-tenant-label { font-size: calc(.7rem * var(--moonweft-font-scale, 1)); }
+    .fi-sidebar:not(.fi-sidebar-open) .orbit-sidebar-brand__link div.fi-logo::first-letter { font-size: calc(1.25rem * var(--moonweft-font-scale, 1)); }
+    .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-item-btn:not(:has(.fi-sidebar-item-icon)) .fi-sidebar-item-label[style]::first-letter { font-size: calc(1rem * var(--moonweft-font-scale, 1)); }
+    .orbit-hero-card__fallback { font-size: calc(clamp(3rem, 8vw, 5rem) * var(--moonweft-font-scale, 1)); }
+    .ec-list .cal-entry-initials { font-size: calc(9px * var(--moonweft-font-scale, 1)); }
+    .ec-list .cal-entry-type { font-size: calc(11px * var(--moonweft-font-scale, 1)); }
+}
