@@ -59,7 +59,8 @@ final class SmsSettingsForm
                         ->helperText(__('moonweft-preference::sms.help.backup_gateway')),
                     Toggle::make('failover_enabled')->label(__('moonweft-preference::sms.fields.failover_enabled'))->helperText(__('moonweft-preference::sms.help.failover')),
                     Slider::make('timeout')->label(__('moonweft-preference::sms.fields.timeout'))
-                        ->range(1, 60)->step(0.001)->decimalPlaces(3)->default(5)->required()
+                        ->range(1, 60)->step(1)->decimalPlaces(0)->default(5)->required()
+                        ->formatStateUsing(static fn (mixed $state): mixed => is_numeric($state) ? (int) round((float) $state) : $state)
                         ->currency('')->rulerLabel(false)->accent('var(--primary-500)')
                         ->presets(array_map(static fn (int $seconds): array => [
                             'amount' => $seconds,

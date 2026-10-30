@@ -61,9 +61,22 @@ final class SmsSettingsTest extends TestCase
         $payload = DB::table('settings')->where('group', SmsSettings::group())->where('name', 'providers')->value('payload');
         $this->assertStringNotContainsString('saved-secret', $payload);
         $this->assertStringNotContainsString('saved-id', $payload);
-        $page->fillForm(['timeout' => 9.125])->call('save')->assertHasNoFormErrors();
+        $page->fillForm(['timeout' => 9])->call('save')->assertHasNoFormErrors();
         $this->assertSame('saved-secret', (new SmsSettings)->providers['aliyun']['access_key_secret']);
-        $this->assertSame(9.125, app(EasySms::class)->getConfig()->get('timeout'));
+        $this->assertSame(9.0, app(EasySms::class)->getConfig()->get('timeout'));
+    }
+
+    public function test_saved_fractional_timeout_can_be_edited_and_saved_as_whole_seconds(): void
+    {
+        $this->actingAs($this->admin(), 'admin');
+        (new SmsSettings)->fill(['timeout' => 27.265])->save();
+
+        $page = Livewire::test(SmsSettingsPage::class)->assertSet('data.timeout', 27);
+        $this->assertSame(27.265, (new SmsSettings)->timeout);
+        $page->call('save')->assertHasNoFormErrors();
+        $this->assertSame(27.0, (new SmsSettings)->timeout);
+        $page->set('data.timeout', 27.265)->call('save')->assertHasFormErrors(['timeout']);
+        $this->assertSame(27.0, (new SmsSettings)->timeout);
     }
 
     public function test_configuration_requires_its_own_permission_and_revocation_is_rechecked(): void
