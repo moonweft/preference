@@ -11,6 +11,7 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Text;
 use Filament\Schemas\Schema;
+use MoonWeft\Components\Slider\Forms\Slider;
 use MoonWeft\Components\Text\Forms\AdvancedTextInput;
 use Moonweft\Preference\Sms\SmsSettings;
 
@@ -57,8 +58,14 @@ final class SmsSettingsForm
                         ->inline()->different('default_gateway')->extraAttributes(['class' => 'mw-sms-provider-options'])
                         ->helperText(__('moonweft-preference::sms.help.backup_gateway')),
                     Toggle::make('failover_enabled')->label(__('moonweft-preference::sms.fields.failover_enabled'))->helperText(__('moonweft-preference::sms.help.failover')),
-                    AdvancedTextInput::make('timeout')->label(__('moonweft-preference::sms.fields.timeout'))->numeric()->minValue(1)->maxValue(60)
-                        ->suffix(__('moonweft-preference::sms.seconds'))->required()->helperText(__('moonweft-preference::sms.help.timeout')),
+                    Slider::make('timeout')->label(__('moonweft-preference::sms.fields.timeout'))
+                        ->range(1, 60)->step(0.001)->decimalPlaces(3)->default(5)->required()
+                        ->currency('')->rulerLabel(false)->accent('var(--primary-500)')
+                        ->presets(array_map(static fn (int $seconds): array => [
+                            'amount' => $seconds,
+                            'label' => $seconds.' '.__('moonweft-preference::sms.seconds'),
+                        ], [5, 10, 30, 60]))
+                        ->helperText(__('moonweft-preference::sms.help.timeout')),
                 ])->columnSpanFull(),
             Tabs::make(__('moonweft-preference::sms.fields.providers'))->tabs($tabs)->columnSpanFull(),
             Section::make(__('moonweft-preference::sms.sections.delivery'))->description(__('moonweft-preference::sms.sections.delivery_description'))->columnSpanFull(),

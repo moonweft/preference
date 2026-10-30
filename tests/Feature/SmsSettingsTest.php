@@ -61,9 +61,9 @@ final class SmsSettingsTest extends TestCase
         $payload = DB::table('settings')->where('group', SmsSettings::group())->where('name', 'providers')->value('payload');
         $this->assertStringNotContainsString('saved-secret', $payload);
         $this->assertStringNotContainsString('saved-id', $payload);
-        $page->fillForm(['timeout' => 9])->call('save')->assertHasNoFormErrors();
+        $page->fillForm(['timeout' => 9.125])->call('save')->assertHasNoFormErrors();
         $this->assertSame('saved-secret', (new SmsSettings)->providers['aliyun']['access_key_secret']);
-        $this->assertSame(9.0, app(EasySms::class)->getConfig()->get('timeout'));
+        $this->assertSame(9.125, app(EasySms::class)->getConfig()->get('timeout'));
     }
 
     public function test_configuration_requires_its_own_permission_and_revocation_is_rechecked(): void

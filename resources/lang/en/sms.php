@@ -14,7 +14,7 @@ return [
         'default_gateway' => 'Primary provider',
         'backup_gateway' => 'Backup provider',
         'failover_enabled' => 'Automatic failover',
-        'timeout' => 'Request timeout',
+        'timeout' => 'Request timeout (seconds)',
         'providers' => 'Provider settings',
         'remove_credentials' => 'Remove saved credentials',
         'access_key_id' => 'Access Key ID',
@@ -37,7 +37,7 @@ return [
     'help' => [
         'default_gateway' => 'Click the preferred provider, enter its credentials on the corresponding tab below and save together. Switching configuration tabs does not change the primary provider.',
         'backup_gateway' => 'Optional and must differ from the primary provider. Click the selected option again to clear it. Choose a backup before enabling failover and complete its credentials before enabling SMS.',
-        'timeout' => 'Enter 1–60 seconds for each provider API request. This is not the SMS delivery time. A timeout does not trigger failover, to avoid duplicate messages.',
+        'timeout' => 'Drag the ruler or choose a preset to select 1–60 seconds in 0.001-second steps. Defaults to 5 seconds per provider API request. This is not the SMS delivery time. A timeout does not trigger failover, to avoid duplicate messages.',
         'provider' => 'Configure provider credentials and signatures here. Primary and backup choices remain in the settings above. When SMS is enabled, complete required fields for the primary and any active failover provider. Saving validates configuration without sending a real message.',
         'failover' => 'Try the backup once after a recognised balance or authentication rejection. Do not switch after a timeout, an unknown outcome or acceptance by the primary provider.',
         'credentials' => 'Saved credentials are hidden. Leave blank to keep the current value.',
