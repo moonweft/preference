@@ -10,6 +10,7 @@ use Filament\Panel;
 use Filament\Support\Assets\Theme;
 use Illuminate\Foundation\Vite;
 use Moonweft\Preference\Filament\Pages\AiSettingsPage;
+use Moonweft\Preference\Filament\Pages\SecuritySettingsPage;
 use Moonweft\Preference\Filament\Pages\SmsSettingsPage;
 use Moonweft\Preference\Filament\Pages\SystemSettingsPage;
 use Moonweft\Preference\Filament\Pages\ThemeSettingsPage;
@@ -36,7 +37,7 @@ final class PreferencePlugin implements Plugin
             }
         });
 
-        $panel->pages([SystemSettingsPage::class, ThemeSettingsPage::class, AiSettingsPage::class, SmsSettingsPage::class])
+        $panel->pages([SystemSettingsPage::class, SecuritySettingsPage::class, ThemeSettingsPage::class, AiSettingsPage::class, SmsSettingsPage::class])
             ->theme(Theme::make('system-appearance')->html(static fn () => app(Vite::class)(
                 Appearance::THEMES[app(SystemSettings::class)->panel_theme],
             )))

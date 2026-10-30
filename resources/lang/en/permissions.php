@@ -17,4 +17,9 @@ return [
         'label' => 'Manage SMS configuration',
         'description' => 'Configure platform SMS availability, default gateway, signatures and credentials.',
     ],
+    'security' => [
+        'group' => 'Account security',
+        'label' => 'Manage account security',
+        'description' => 'Manage backend password strength and mandatory two-factor authentication.',
+    ],
 ];

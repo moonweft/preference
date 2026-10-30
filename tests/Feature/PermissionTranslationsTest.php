@@ -17,11 +17,13 @@ final class PermissionTranslationsTest extends TestCase
                 'preference.system.manage' => ['系统配置', '系统设置', '管理系统设置', '维护平台统一主题、配色、时区、日期与时间格式。'],
                 'preference.ai.manage' => ['系统配置', '人工智能', '管理 AI 配置', '配置 AI 服务商、模型、凭据及执行限额。'],
                 'preference.sms.manage' => ['系统配置', '短信服务', '管理短信配置', '配置平台短信开关、默认服务商、签名及凭据。'],
+                'preference.security.manage' => ['系统配置', '账户安全', '管理账户安全', '管理后台密码强度和强制双因素验证。'],
             ],
             'en' => [
                 'preference.system.manage' => ['System configuration', 'System settings', 'Manage system settings', 'Manage the platform theme, colours, time zone and date and time formats.'],
                 'preference.ai.manage' => ['System configuration', 'Artificial intelligence', 'Manage AI configuration', 'Configure AI providers, models, credentials and execution limits.'],
                 'preference.sms.manage' => ['System configuration', 'SMS service', 'Manage SMS configuration', 'Configure platform SMS availability, default gateway, signatures and credentials.'],
+                'preference.security.manage' => ['System configuration', 'Account security', 'Manage account security', 'Manage backend password strength and mandatory two-factor authentication.'],
             ],
         ];
         $originalLocale = app()->getLocale();
@@ -40,6 +42,7 @@ final class PermissionTranslationsTest extends TestCase
                     'preference.system.manage' => ['admin', 'preference', 'system', true],
                     'preference.ai.manage' => ['admin', 'preference', 'ai', true],
                     'preference.sms.manage' => ['admin', 'preference', 'sms', true],
+                    'preference.security.manage' => ['admin', 'preference', 'security', true],
                 ], $identities);
             }
         } finally {
