@@ -108,7 +108,7 @@ final class SmsSettings extends Settings
             'default_gateway' => ['required', Rule::in(array_keys(self::GATEWAYS))],
             'backup_gateway' => [Rule::requiredIf($this->failover_enabled), 'nullable', Rule::in(array_keys(self::GATEWAYS)), 'different:default_gateway'],
             'failover_enabled' => ['required', 'boolean'],
-            'timeout' => ['required', 'numeric', 'between:1,60'],
+            'timeout' => ['required', 'numeric', 'between:1,180'],
             'providers' => ['array:'.implode(',', array_keys(self::GATEWAYS))],
         ];
         $attributes = [];
